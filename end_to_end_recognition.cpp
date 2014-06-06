@@ -1,0 +1,215 @@
+#include <opencv2/opencv.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/objdetect.hpp>
+#include <opencv2/imgproc.hpp>
+
+#include <iostream>
+
+#include "ocr_tesseract.h"
+#include "ergrouping_nm.h"
+
+using namespace cv;
+using namespace std;
+
+//Calculate edit distance netween two words
+size_t edit_distance(const string& A, const string& B);
+size_t min(size_t x, size_t y, size_t z);
+bool   isRepetitive(const string& s);
+
+//Perform text detection and recognition and evaluate results using edit distance
+int main(int argc, char* argv[]) 
+{
+
+  Mat image;
+  if(argc>1)
+    image  = imread(argv[1]);
+  else
+  {
+    cout << "Usage: " << argv[0] << " <img_filename> <gt_word1> <gt_word2> ... <gt_wordN>" << endl;
+    return(0);
+  }
+
+  vector<string> words_gt;
+  for (int i=2; i<argc; i++)
+  {
+    string s = string(argv[i]);
+    if (s.size() > 1)
+    {
+      words_gt.push_back(string(argv[i]));
+      //cout << " GT word " << words_gt[words_gt.size()-1] << endl;
+    }
+  }
+
+  /*Text Detection (OCR)*/
+
+  // Extract channels to be processed individually
+  vector<Mat> channels;
+
+  Mat grey;
+  cvtColor(image,grey,COLOR_RGB2GRAY);
+
+  channels.push_back(grey);
+  channels.push_back(255-grey);
+
+  // Create ERFilter objects with the 1st and 2nd stage default classifiers
+  Ptr<ERFilter> er_filter1 = createERFilterNM1(loadClassifierNM1("trained_classifierNM1.xml"),8,0.00015,0.13,0.2,true,0.1);
+  Ptr<ERFilter> er_filter2 = createERFilterNM2(loadClassifierNM2("trained_classifierNM2.xml"),0.5);
+
+  vector<vector<ERStat> > regions(channels.size());
+  // Apply the default cascade classifier to each independent channel (could be done in parallel)
+  for (int c=0; c<(int)channels.size(); c++)
+  {
+      er_filter1->run(channels[c], regions[c]);
+      er_filter2->run(channels[c], regions[c]);
+  }
+
+  // Detect character groups
+  vector< vector<Vec2i> > nm_region_groups;
+  vector<Rect> nm_boxes;
+  erGroupingNM(image, channels, regions, nm_region_groups, nm_boxes);
+
+
+
+  /*Text Recognition (OCR)*/
+
+  OCRTesseract* ocr = new OCRTesseract();
+  string output;
+
+  Mat out_img;
+  Mat out_img_detection;
+  image.copyTo(out_img);
+  image.copyTo(out_img_detection);
+  float scale_img  = 600./image.rows;
+  float scale_font = (2-scale_img)/1.4;
+  vector<string> words_detection;
+  
+  for (int i=0; i<nm_boxes.size(); i++)
+  {
+
+    rectangle(out_img_detection, nm_boxes[i].tl(), nm_boxes[i].br(), Scalar(0,255,255), 3);
+
+    Mat group_img = Mat::zeros(image.rows+2, image.cols+2, CV_8UC1);
+    er_show(channels, regions, nm_region_groups[i], group_img);
+    //image(nm_boxes[i]).copyTo(group_img);
+
+    vector<Rect>   boxes;
+    vector<string> words;
+    vector<float>  confidences;
+    ocr->run(group_img, output, &boxes, &words, &confidences, OCR_LEVEL_WORD);
+
+    output.erase(remove(output.begin(), output.end(), '\n'), output.end());
+    //cout << "OCR output = \"" << output << "\" lenght = " << output.size() << endl;
+    if (output.size() < 3)
+      continue;
+
+    for (int j=0; j<boxes.size(); j++)
+    {
+      //cout << "  word = " << words[j] << "\t confidence = " << confidences[j] << endl;
+      if ((words[j].size() < 2) || (confidences[j] < 51) || 
+          ((words[j].size()==2) && (words[j][0] == words[j][1])) ||
+          ((words[j].size()< 4) && (confidences[j] < 60)) ||
+          isRepetitive(words[j]))
+        continue;
+      words_detection.push_back(words[j]);
+      rectangle(out_img, boxes[j].tl(), boxes[j].br(), Scalar(255,0,255),3);
+      Size word_size = getTextSize(words[j], FONT_HERSHEY_SIMPLEX, scale_font, 3*scale_font, NULL);
+      rectangle(out_img, boxes[j].tl()-Point(3,word_size.height+3), boxes[j].tl()+Point(word_size.width,0), Scalar(255,0,255),-1);
+      putText(out_img, words[j], boxes[j].tl()-Point(1,1), FONT_HERSHEY_SIMPLEX, scale_font, Scalar(255,255,255),3*scale_font);
+    }
+
+  }
+
+  int total_edit_distance = 0;
+  int num_gt_characters   = 0;
+  for (int i=0; i<words_gt.size(); i++)
+  {
+    num_gt_characters += words_gt[i].size();
+    int min_dist_i = INT_MAX;
+    int best_idx   = -1;
+    for (int j=0; j<words_detection.size(); j++)
+    {
+      int dist_i_j = edit_distance(words_gt[i],words_detection[j]);
+      if ((dist_i_j<min_dist_i) && ((dist_i_j < words_gt[i].size()) && (dist_i_j != words_detection[j].size())))
+      {
+        min_dist_i = dist_i_j;
+        best_idx = j;
+      }
+    }
+    if (best_idx > -1)
+    {
+      //cout << " GT word " << words_gt[i] << " best match " << words_detection[best_idx] << " with dist " << min_dist_i << endl;
+      total_edit_distance += min_dist_i;
+      words_detection.erase(words_detection.begin()+best_idx);
+    } else {
+      //cout << " GT word " << words_gt[i] << " no match found" << endl;
+      total_edit_distance += words_gt[i].size();
+    }
+  }
+
+  for (int j=0; j<words_detection.size(); j++)
+  {
+    total_edit_distance += words_detection[j].size();
+  }
+
+  cout << endl << "total edit distance = " << total_edit_distance << endl;
+  cout << "edit distance ratio = " << (float)total_edit_distance / num_gt_characters << endl;
+
+
+
+  resize(out_img_detection,out_img_detection,Size(image.cols*scale_img,image.rows*scale_img));
+  imshow("detection", out_img_detection);
+  imwrite("detection.jpg", out_img_detection);
+  resize(out_img,out_img,Size(image.cols*scale_img,image.rows*scale_img));
+  imshow("recognition", out_img);
+  imwrite("recognition.jpg", out_img);
+  waitKey(0);
+
+  return 0;
+}
+
+size_t min(size_t x, size_t y, size_t z)
+{
+  return x < y ? min(x,z) : min(y,z);
+}
+
+size_t edit_distance(const string& A, const string& B)
+{
+  size_t NA = A.size();
+  size_t NB = B.size();
+
+  vector< vector<size_t> > M(NA + 1, vector<size_t>(NB + 1));
+
+  for (size_t a = 0; a <= NA; ++a)
+    M[a][0] = a;
+
+  for (size_t b = 0; b <= NB; ++b)
+    M[0][b] = b;
+
+  for (size_t a = 1; a <= NA; ++a)
+    for (size_t b = 1; b <= NB; ++b)
+    {
+      size_t x = M[a-1][b] + 1;
+      size_t y = M[a][b-1] + 1;
+      size_t z = M[a-1][b-1] + (A[a-1] == B[b-1] ? 0 : 1);
+      M[a][b] = min(x,y,z);
+    }
+
+  return M[A.size()][B.size()];
+}
+
+bool isRepetitive(const string& s)
+{
+  int count = 0;
+  for (int i=0; i<s.size(); i++)
+  {
+    if ((s[i] == 'i') ||
+        (s[i] == 'l') ||
+        (s[i] == 'I'))
+      count++;
+  }
+  if (count > (s.size()+1)/2)
+  {
+    return true;
+  }
+  return false;
+}
