@@ -15,6 +15,7 @@ using namespace std;
 size_t edit_distance(const string& A, const string& B);
 size_t min(size_t x, size_t y, size_t z);
 bool   isRepetitive(const string& s);
+bool   sort_by_lenght(const string &a, const string &b){return (a.size()>b.size());};
 
 //Perform text detection and recognition and evaluate results using edit distance
 int main(int argc, char* argv[]) 
@@ -29,18 +30,8 @@ int main(int argc, char* argv[])
     return(0);
   }
 
-  vector<string> words_gt;
-  for (int i=2; i<argc; i++)
-  {
-    string s = string(argv[i]);
-    if (s.size() > 1)
-    {
-      words_gt.push_back(string(argv[i]));
-      //cout << " GT word " << words_gt[words_gt.size()-1] << endl;
-    }
-  }
 
-  /*Text Detection (OCR)*/
+  /*Text Detection*/
 
   // Extract channels to be processed individually
   vector<Mat> channels;
@@ -119,40 +110,94 @@ int main(int argc, char* argv[])
 
   }
 
-  int total_edit_distance = 0;
-  int num_gt_characters   = 0;
-  for (int i=0; i<words_gt.size(); i++)
+
+  /* Recognition evaluation with (approximate) hungarian matching and edit distances */
+
+  if(argc>2)
   {
-    num_gt_characters += words_gt[i].size();
-    int min_dist_i = INT_MAX;
-    int best_idx   = -1;
-    for (int j=0; j<words_detection.size(); j++)
+    int num_gt_characters   = 0;
+    vector<string> words_gt;
+    for (int i=2; i<argc; i++)
     {
-      int dist_i_j = edit_distance(words_gt[i],words_detection[j]);
-      if ((dist_i_j<min_dist_i) && ((dist_i_j < words_gt[i].size()) && (dist_i_j != words_detection[j].size())))
+      string s = string(argv[i]);
+      if (s.size() > 1)
       {
-        min_dist_i = dist_i_j;
-        best_idx = j;
+        words_gt.push_back(string(argv[i]));
+        //cout << " GT word " << words_gt[words_gt.size()-1] << endl;
+        num_gt_characters += words_gt[words_gt.size()-1].size();
       }
     }
-    if (best_idx > -1)
+
+    if (words_detection.empty())
     {
-      //cout << " GT word " << words_gt[i] << " best match " << words_detection[best_idx] << " with dist " << min_dist_i << endl;
-      total_edit_distance += min_dist_i;
-      words_detection.erase(words_detection.begin()+best_idx);
-    } else {
-      //cout << " GT word " << words_gt[i] << " no match found" << endl;
-      total_edit_distance += words_gt[i].size();
+      cout << endl << "number of characters in gt = " << num_gt_characters << endl;
+      cout << "total edit distance = " << num_gt_characters << endl;
+      cout << "edit distance ratio = 1" << endl;
+    }
+    else
+    {
+
+      sort(words_gt.begin(),words_gt.end(),sort_by_lenght);
+
+      int max_dist=0;
+      vector< vector<int> > assignment_mat;
+      for (int i=0; i<words_gt.size(); i++)
+      {
+        vector<int> assignment_row(words_detection.size(),0);
+        assignment_mat.push_back(assignment_row);
+        for (int j=0; j<words_detection.size(); j++)
+        {
+          assignment_mat[i][j] = edit_distance(words_gt[i],words_detection[j]);
+          max_dist = max(max_dist,assignment_mat[i][j]);
+        }
+      }
+        
+      vector<int> words_detection_matched;
+  
+      int total_edit_distance = 0;
+      int assigned_gt_words=0;
+      for (int search_dist=0; search_dist<=max_dist; search_dist++)
+      {
+        for (int i=0; i<assignment_mat.size(); i++)
+        {
+          int min_dist_idx =  distance(assignment_mat[i].begin(),
+                                       min_element(assignment_mat[i].begin(),assignment_mat[i].end()));
+          if (assignment_mat[i][min_dist_idx] == search_dist)
+          {
+            cout << " GT word \"" << words_gt[i] << "\" best match \"" << words_detection[min_dist_idx] << "\" with dist " << assignment_mat[i][min_dist_idx] << endl;
+            total_edit_distance += assignment_mat[i][min_dist_idx];
+            words_detection_matched.push_back(min_dist_idx);
+            words_gt.erase(words_gt.begin()+i);
+            assignment_mat.erase(assignment_mat.begin()+i);
+            for (int j=0; j<assignment_mat.size(); j++)
+            {
+              assignment_mat[j][min_dist_idx]=INT_MAX;
+            }
+            i--;
+          }
+        }
+      }
+  
+      for (int j=0; j<words_gt.size(); j++)
+      {
+        cout << " GT word \"" << words_gt[j] << "\" no match found" << endl;
+        total_edit_distance += words_gt[j].size();
+      }
+      for (int j=0; j<words_detection.size(); j++)
+      {
+        if (find(words_detection_matched.begin(),words_detection_matched.end(),j) == words_detection_matched.end())
+        {
+          cout << " Detection word \"" << words_detection[j] << "\" no match found" << endl;
+          total_edit_distance += words_detection[j].size();
+        }
+      }
+  
+    
+      cout << endl << "number of characters in gt = " << num_gt_characters << endl;
+      cout << "total edit distance = " << total_edit_distance << endl;
+      cout << "edit distance ratio = " << (float)total_edit_distance / num_gt_characters << endl;
     }
   }
-
-  for (int j=0; j<words_detection.size(); j++)
-  {
-    total_edit_distance += words_detection[j].size();
-  }
-
-  cout << endl << "total edit distance = " << total_edit_distance << endl;
-  cout << "edit distance ratio = " << (float)total_edit_distance / num_gt_characters << endl;
 
 
 
@@ -213,3 +258,4 @@ bool isRepetitive(const string& s)
   }
   return false;
 }
+
