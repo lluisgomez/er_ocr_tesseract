@@ -1,10 +1,14 @@
 #include "ocr_tesseract.h"
 
 //Default constructor
-OCRTesseract::OCRTesseract()
+OCRTesseract::OCRTesseract(const char* datapath, const char* language, const char* char_whitelist, tesseract::OcrEngineMode oemode, tesseract::PageSegMode psmode)
 {
 
-  if (tess.Init(NULL, "eng", tesseract::OEM_DEFAULT))
+  const char *lang = "eng";
+  if (language != NULL)
+    lang = language;
+
+  if (tess.Init(datapath, lang, oemode))
   {
     cout << "OCRTesseract: Could not initialize tesseract." << endl;
     throw 1;
@@ -12,10 +16,14 @@ OCRTesseract::OCRTesseract()
 
   cout << "OCRTesseract: tesseract version " << tess.Version() << endl;
 
-  tesseract::PageSegMode pagesegmode = tesseract::PSM_AUTO;
+  tesseract::PageSegMode pagesegmode = psmode;
   tess.SetPageSegMode(pagesegmode);
 
-  tess.SetVariable("tessedit_char_whitelist","0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+  if(char_whitelist != NULL)
+    tess.SetVariable("tessedit_char_whitelist", char_whitelist);
+  else
+    tess.SetVariable("tessedit_char_whitelist", "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+
   tess.SetVariable("save_best_choices", "T");
 
 }

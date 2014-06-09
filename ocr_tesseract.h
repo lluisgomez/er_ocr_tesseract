@@ -25,8 +25,7 @@ class OCRTesseract
 
   public:
 		//Default constructor
-		OCRTesseract(); //(const char* datapath, const char* language, tesseract::OcrEngineMode oem, tesseract::PageSegMode psmode)
-                    //(const char* char_whitelist, )
+		OCRTesseract(const char* datapath=NULL, const char* language=NULL, const char* char_whitelist=NULL, tesseract::OcrEngineMode oem=tesseract::OEM_DEFAULT, tesseract::PageSegMode psmode=tesseract::PSM_AUTO);
 
 		~OCRTesseract();
 
