@@ -5,10 +5,6 @@
 using  namespace std;
 using  namespace cv;
 
-void er_show(vector<Mat> &channels, vector<vector<ERStat> > &regions);
-
-//This to be moved to include file
-
 //these threshold values are learned from training dataset
 #define PAIR_MIN_HEIGHT_RATIO     0.4
 #define PAIR_MIN_CENTROID_ANGLE - 0.85
@@ -841,19 +837,4 @@ void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::v
 
     }*/
 
-}
-
-void er_show(vector<Mat> &channels, vector<vector<ERStat> > &regions, vector<Vec2i> group, Mat& segmentation)
-{
-  for (int r=0; r<(int)group.size(); r++)
-  {
-      ERStat er = regions[group[r][0]][group[r][1]];
-      if (er.parent != NULL) // deprecate the root region
-      {
-          int newMaskVal = 255;
-          int flags = 4 + (newMaskVal << 8) + FLOODFILL_FIXED_RANGE + FLOODFILL_MASK_ONLY;
-          floodFill(channels[group[r][0]],segmentation,Point(er.pixel%channels[group[r][0]].cols,er.pixel/channels[group[r][0]].cols),
-                    Scalar(255),0,Scalar(er.level),Scalar(0),flags);
-      }
-  }
 }
