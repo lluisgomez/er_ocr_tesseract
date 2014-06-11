@@ -65,7 +65,9 @@ int main(int argc, char* argv[])
 
   /*Text Recognition (OCR)*/
 
+  //double t_r = getTickCount();
   OCRTesseract* ocr = new OCRTesseract();
+  //cout << " ocr constructor " << ((double)getTickCount() - t_r)*1000/getTickFrequency() << " ms." << endl;
   string output;
 
   Mat out_img;
@@ -75,7 +77,9 @@ int main(int argc, char* argv[])
   float scale_img  = 600./image.rows;
   float scale_font = (2-scale_img)/1.4;
   vector<string> words_detection;
-  
+ 
+  //t_r = getTickCount();
+
   for (int i=0; i<nm_boxes.size(); i++)
   {
 
@@ -84,6 +88,8 @@ int main(int argc, char* argv[])
     Mat group_img = Mat::zeros(image.rows+2, image.cols+2, CV_8UC1);
     er_draw(channels, regions, nm_region_groups[i], group_img);
     //image(nm_boxes[i]).copyTo(group_img);
+    group_img(nm_boxes[i]).copyTo(group_img);
+    copyMakeBorder(group_img,group_img,15,15,15,15,BORDER_CONSTANT,Scalar(0));
 
     vector<Rect>   boxes;
     vector<string> words;
@@ -97,6 +103,9 @@ int main(int argc, char* argv[])
 
     for (int j=0; j<boxes.size(); j++)
     {
+      boxes[j].x += nm_boxes[i].x-15;
+      boxes[j].y += nm_boxes[i].y-15;
+
       //cout << "  word = " << words[j] << "\t confidence = " << confidences[j] << endl;
       if ((words[j].size() < 2) || (confidences[j] < 51) || 
           ((words[j].size()==2) && (words[j][0] == words[j][1])) ||
@@ -111,6 +120,8 @@ int main(int argc, char* argv[])
     }
 
   }
+
+  //cout << "Recognition time " << ((double)getTickCount() - t_r)*1000/getTickFrequency() << " ms." << endl;
 
 
   /* Recognition evaluation with (approximate) hungarian matching and edit distances */
