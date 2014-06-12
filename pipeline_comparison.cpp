@@ -9,7 +9,7 @@
 #include "ergrouping_nm.h"
 #include "msers_to_erstats.h"
 
-#define REGION_TYPE 2 // 0=ERStats, 1=MSER, 2=canny+contour
+#define REGION_TYPE 1 // 0=ERStats, 1=MSER, 2=canny+contour
 
 using namespace cv;
 using namespace std;
@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
 
 
   vector<vector<ERStat> > regions(channels.size());
-  double t = (double)getTickCount();
+  double t_d = (double)getTickCount();
 
   switch (REGION_TYPE)
   {
@@ -64,8 +64,6 @@ int main(int argc, char* argv[])
           er_filter1->run(channels[c], regions[c]);
           er_filter2->run(channels[c], regions[c]);
       }
-      t = (double)getTickCount() - t;
-      printf( "CSER extracted %d regions in %g ms.\n", regions[0].size()+regions[1].size(),t*1000./getTickFrequency() );
       break;
     }
     case 1:
@@ -76,10 +74,6 @@ int main(int argc, char* argv[])
     
       //Convert the output of MSER to suitable input for the grouping/recognition algorithms
       MSERsToERStats(grey, contours, regions);
-      t = (double)getTickCount() - t;
-      printf( "MSER extracted %d contours in %g ms.\n", (int)contours.size(),
-             t*1000./getTickFrequency() );
-      cout << " extracted " << regions[0].size()+regions[1].size() << " regions "<< endl;
       break;
     }
     case 2:
@@ -101,8 +95,6 @@ int main(int argc, char* argv[])
       cout << grad_x.cols << "," << grad_x.rows  << "," << grad_x.type()  << endl;
       magnitude( grad_x, grad_y, canny_output);
       canny_output.convertTo(canny_output,CV_8UC1);
-      imshow( "Canny", canny_output );
-      waitKey(0);
       // Find contours
       vector<vector<Point> > contours;
       vector<Vec4i> hierarchy;
@@ -110,39 +102,28 @@ int main(int argc, char* argv[])
 
       //Convert the output of MSER to suitable input for the grouping/recognition algorithms
       //MSERsToERStats(grey, contours, hierarchy, regions);
-      t = (double)getTickCount() - t;
-      printf( "MSER extracted %d contours in %g ms.\n", (int)contours.size(),
-             t*1000./getTickFrequency() );
-      cout << " extracted " << regions[0].size()+regions[1].size() << " regions "<< endl;
 
-      RNG rng(12345);
-      Mat drawing = Mat::zeros( canny_output.size(), CV_8UC3 );
-      for( int i = 0; i< contours.size(); i++ )
-      {
-        Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-        drawContours( drawing, contours, i, color, -1, 8, hierarchy, 0, Point() );
-      }
-
-      imshow( "Contours", drawing );
-      waitKey(0);
 
 
       break;
     }
   }
+  cout << " Detection time          " << ((double)getTickCount() - t_d)*1000/getTickFrequency() << " ms." << endl;
     
   // Detect character groups
+  double t_g = getTickCount();
   vector< vector<Vec2i> > nm_region_groups;
   vector<Rect> nm_boxes;
   erGroupingNM(image, channels, regions, nm_region_groups, nm_boxes);
-  cout << " detected " << nm_boxes.size() << " groups from " << regions[0].size()+regions[1].size() << " regions "<< endl;
+  //cout << " detected " << nm_boxes.size() << " groups from " << regions[0].size()+regions[1].size() << " regions "<< endl;
+  cout << " Grouping time           " << ((double)getTickCount() - t_g)*1000/getTickFrequency() << " ms." << endl;
 
 
   /*Text Recognition (OCR)*/
 
-  //double t_r = getTickCount();
+  double t_r = getTickCount();
   OCRTesseract* ocr = new OCRTesseract();
-  //cout << " ocr constructor " << ((double)getTickCount() - t_r)*1000/getTickFrequency() << " ms." << endl;
+  cout << " OCR initialization time "<< ((double)getTickCount() - t_r)*1000/getTickFrequency() << " ms." << endl;
   string output;
 
   Mat out_img;
@@ -153,7 +134,7 @@ int main(int argc, char* argv[])
   float scale_font = (2-scale_img)/1.4;
   vector<string> words_detection;
  
-  //t_r = getTickCount();
+  t_r = getTickCount();
 
   for (int i=0; i<nm_boxes.size(); i++)
   {
@@ -196,7 +177,7 @@ int main(int argc, char* argv[])
 
   }
 
-  //cout << "Recognition time " << ((double)getTickCount() - t_r)*1000/getTickFrequency() << " ms." << endl;
+  cout << " OCR recognition time    " << ((double)getTickCount() - t_r)*1000/getTickFrequency() << " ms." << endl;
 
 
   /* Recognition evaluation with (approximate) hungarian matching and edit distances */
@@ -289,13 +270,13 @@ int main(int argc, char* argv[])
 
 
 
-  resize(out_img_detection,out_img_detection,Size(image.cols*scale_img,image.rows*scale_img));
+  /*resize(out_img_detection,out_img_detection,Size(image.cols*scale_img,image.rows*scale_img));
   imshow("detection", out_img_detection);
   imwrite("detection.jpg", out_img_detection);
   resize(out_img,out_img,Size(image.cols*scale_img,image.rows*scale_img));
   imshow("recognition", out_img);
   imwrite("recognition.jpg", out_img);
-  waitKey(0);
+  waitKey(0);*/
 
   return 0;
 }

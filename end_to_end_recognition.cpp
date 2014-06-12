@@ -35,6 +35,7 @@ int main(int argc, char* argv[])
 
   /*Text Detection*/
 
+  double t_d = getTickCount();
   // Extract channels to be processed individually
   vector<Mat> channels;
 
@@ -55,19 +56,22 @@ int main(int argc, char* argv[])
       er_filter1->run(channels[c], regions[c]);
       er_filter2->run(channels[c], regions[c]);
   }
+  cout << " Detection time          " << ((double)getTickCount() - t_d)*1000/getTickFrequency() << " ms." << endl;
 
+  double t_g = getTickCount();
   // Detect character groups
   vector< vector<Vec2i> > nm_region_groups;
   vector<Rect> nm_boxes;
   erGroupingNM(image, channels, regions, nm_region_groups, nm_boxes);
+  cout << " Grouping time           " << ((double)getTickCount() - t_g)*1000/getTickFrequency() << " ms." << endl;
 
 
 
   /*Text Recognition (OCR)*/
 
-  //double t_r = getTickCount();
+  double t_r = getTickCount();
   OCRTesseract* ocr = new OCRTesseract();
-  //cout << " ocr constructor " << ((double)getTickCount() - t_r)*1000/getTickFrequency() << " ms." << endl;
+  cout << " OCR initialization time " << ((double)getTickCount() - t_r)*1000/getTickFrequency() << " ms." << endl;
   string output;
 
   Mat out_img;
@@ -78,7 +82,7 @@ int main(int argc, char* argv[])
   float scale_font = (2-scale_img)/1.4;
   vector<string> words_detection;
  
-  //t_r = getTickCount();
+  t_r = getTickCount();
 
   for (int i=0; i<nm_boxes.size(); i++)
   {
@@ -121,7 +125,7 @@ int main(int argc, char* argv[])
 
   }
 
-  //cout << "Recognition time " << ((double)getTickCount() - t_r)*1000/getTickFrequency() << " ms." << endl;
+  cout << " OCR recognition time    " << ((double)getTickCount() - t_r)*1000/getTickFrequency() << " ms." << endl;
 
 
   /* Recognition evaluation with (approximate) hungarian matching and edit distances */
@@ -214,13 +218,13 @@ int main(int argc, char* argv[])
 
 
 
-  resize(out_img_detection,out_img_detection,Size(image.cols*scale_img,image.rows*scale_img));
-  imshow("detection", out_img_detection);
-  imwrite("detection.jpg", out_img_detection);
-  resize(out_img,out_img,Size(image.cols*scale_img,image.rows*scale_img));
-  imshow("recognition", out_img);
-  imwrite("recognition.jpg", out_img);
-  waitKey(0);
+  //resize(out_img_detection,out_img_detection,Size(image.cols*scale_img,image.rows*scale_img));
+  //imshow("detection", out_img_detection);
+  //imwrite("detection.jpg", out_img_detection);
+  //resize(out_img,out_img,Size(image.cols*scale_img,image.rows*scale_img));
+  //imshow("recognition", out_img);
+  //imwrite("recognition.jpg", out_img);
+  //waitKey(0);
 
   return 0;
 }
