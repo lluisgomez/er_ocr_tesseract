@@ -35,7 +35,6 @@ int main(int argc, char* argv[])
     return(0);
   }
 
-
   /*Text Detection*/
 
   Mat grey;
@@ -78,33 +77,6 @@ int main(int argc, char* argv[])
     }
     case 2:
     {
-      // Detect edges using canny
-      Mat canny_output = Mat_<float>(grey.size());
-      //Canny( grey, canny_output, 100, 200, 3 );
-      Mat kernel = (Mat_<float>(1,3) << -1,0,1);
-      Mat grad_x = Mat_<float>(grey.size(),CV_32F);
-      filter2D(grey, grad_x, -1, kernel, Point(-1,-1), 0, BORDER_DEFAULT);
-
-      Mat kernel2 = (Mat_<float>(3,1) << -1,0,1);
-      Mat grad_y = Mat_<float>(grey.size(),CV_32F);
-      filter2D(grey, grad_y, -1, kernel2, Point(-1,-1), 0, BORDER_DEFAULT);
-
-      grad_y.convertTo(grad_x,CV_32F);
-      grad_y.convertTo(grad_y,CV_32F);
-      cout << grad_y.cols << "," << grad_y.rows  << "," << grad_y.type()  << endl;
-      cout << grad_x.cols << "," << grad_x.rows  << "," << grad_x.type()  << endl;
-      magnitude( grad_x, grad_y, canny_output);
-      canny_output.convertTo(canny_output,CV_8UC1);
-      // Find contours
-      vector<vector<Point> > contours;
-      vector<Vec4i> hierarchy;
-      findContours( canny_output, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0) );
-
-      //Convert the output of MSER to suitable input for the grouping/recognition algorithms
-      //MSERsToERStats(grey, contours, hierarchy, regions);
-
-
-
       break;
     }
   }
