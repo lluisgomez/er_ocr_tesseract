@@ -19,7 +19,7 @@ total_time_ocr_alt = 0.0
 counter = 0
 for line in content:
   print line
-  if (counter<3):
+  if (counter>=0):
     args  = line.split()
     ident = args[0].split("/")
     ident = ident[1].split(".")
@@ -43,18 +43,19 @@ for line in content:
     total_time_ocr_alt += TIME_OCR_ALT
 
     #convert label on top of original image
-    subprocess.call(["convert", args[0], "-geometry", "640x", "tmp1.jpg"])
-    label = " "
+    #subprocess.call(["convert", args[0], "-geometry", "640x", "tmp1.jpg"])
+    subprocess.call(["convert", "decomposition.jpg", "-geometry", "640x", "tmp1.jpg"])
+    label = "Image size "+str(IMG_W)+"x"+str(IMG_H)+" pixels"
     subprocess.call(["convert", "tmp1.jpg", "-background", "white", "-size", "x31", "label:"+label, "+swap", "-gravity", "Center", "-append", "tmp1.jpg"])
-    label = "Original Image ("+str(IMG_W)+"x"+str(IMG_H)+" pixels)"
+    label = "Region detection (2 channels) = "+str(int(TIME_REGION_DETECTION))+" ms."
     subprocess.call(["convert", "tmp1.jpg", "-background", "white", "-size", "x31", "label:"+label, "+swap", "-gravity", "Center", "-append", "tmp1.jpg"])
     label = " "
     subprocess.call(["convert", "tmp1.jpg", "-background", "white", "-size", "x31", "label:"+label, "-gravity", "Center", "-append", "tmp1.jpg"])
     #convert label on top of detection image
     subprocess.call(["convert", "detection.jpg", "-geometry", "640x", "tmp2.jpg"])
-    label = "Grouping         (2 channels) = "+str(int(TIME_GROUPING))+" ms."
+    label = " "
     subprocess.call(["convert", "tmp2.jpg", "-background", "white", "-size", "x31", "label:"+label, "+swap", "-gravity", "Center", "-append", "tmp2.jpg"])
-    label = "Region detection (2 channels) = "+str(int(TIME_REGION_DETECTION))+" ms."
+    label = "Grouping         (2 channels) = "+str(int(TIME_GROUPING))+" ms."
     subprocess.call(["convert", "tmp2.jpg", "-background", "white", "-size", "x31", "label:"+label, "+swap", "-gravity", "Center", "-append", "tmp2.jpg"])
     label = " "
     subprocess.call(["convert", "tmp2.jpg", "-background", "white", "-size", "x31", "label:"+label, "-gravity", "Center", "-append", "tmp2.jpg"])
@@ -81,18 +82,19 @@ for line in content:
 
 
     #convert label on top of original image alternative
-    subprocess.call(["convert", args[0], "-geometry", "640x", "tmp5.jpg"])
-    label = " "
+    #subprocess.call(["convert", args[0], "-geometry", "640x", "tmp5.jpg"])
+    subprocess.call(["convert", "decomposition_alt.jpg", "-geometry", "640x", "tmp5.jpg"])
+    label = "Image size "+str(IMG_W)+"x"+str(IMG_H)+" pixels"
     subprocess.call(["convert", "tmp5.jpg", "-background", "white", "-size", "x31", "label:"+label, "+swap", "-gravity", "Center", "-append", "tmp5.jpg"])
-    label = "Original Image ("+str(IMG_W)+"x"+str(IMG_H)+" pixels)"
+    label = "Region detection (2 channels) = "+str(int(TIME_REGION_DETECTION_ALT))+" ms."
     subprocess.call(["convert", "tmp5.jpg", "-background", "white", "-size", "x31", "label:"+label, "+swap", "-gravity", "Center", "-append", "tmp5.jpg"])
     label = " "
     subprocess.call(["convert", "tmp5.jpg", "-background", "white", "-size", "x31", "label:"+label, "-gravity", "Center", "-append", "tmp5.jpg"])
     #convert label on top of detection image alternative
     subprocess.call(["convert", "detection_alt.jpg", "-geometry", "640x", "tmp6.jpg"])
-    label = "Grouping         (2 channels) = "+str(int(TIME_GROUPING_ALT))+" ms."
+    label = " "
     subprocess.call(["convert", "tmp6.jpg", "-background", "white", "-size", "x31", "label:"+label, "+swap", "-gravity", "Center", "-append", "tmp6.jpg"])
-    label = "Region detection (2 channels) = "+str(int(TIME_REGION_DETECTION_ALT))+" ms."
+    label = "Grouping         (2 channels) = "+str(int(TIME_GROUPING_ALT))+" ms."
     subprocess.call(["convert", "tmp6.jpg", "-background", "white", "-size", "x31", "label:"+label, "+swap", "-gravity", "Center", "-append", "tmp6.jpg"])
     label = " "
     subprocess.call(["convert", "tmp6.jpg", "-background", "white", "-size", "x31", "label:"+label, "-gravity", "Center", "-append", "tmp6.jpg"])

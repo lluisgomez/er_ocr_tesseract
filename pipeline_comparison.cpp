@@ -82,6 +82,22 @@ int main(int argc, char* argv[])
     }
   }
   cout << "TIME_REGION_DETECTION_ALT = " << ((double)getTickCount() - t_d)*1000/getTickFrequency() << endl;
+
+  Mat out_img_decomposition= Mat::zeros(image.rows+2, image.cols+2, CV_8UC1);
+  vector<Vec2i> tmp_group;
+  for (int i=0; i<regions.size(); i++)
+  {
+    for (int j=0; j<regions[i].size();j++)
+    {
+      tmp_group.push_back(Vec2i(i,j));
+    }
+    Mat tmp= Mat::zeros(image.rows+2, image.cols+2, CV_8UC1);
+    er_draw(channels, regions, tmp_group, tmp);
+    if (i > 0)
+      tmp = tmp / 2;
+    out_img_decomposition = out_img_decomposition | tmp;
+    tmp_group.clear();
+  }
     
   // Detect character groups
   double t_g = getTickCount();
@@ -266,6 +282,7 @@ int main(int argc, char* argv[])
   imwrite("recognition_alt.jpg", out_img);
   //waitKey(0);
   imwrite("segmentation_alt.jpg", out_img_segmentation);
+  imwrite("decomposition_alt.jpg", out_img_decomposition);
 
   return 0;
 }
