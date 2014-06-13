@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
     {
       //Extract MSER
       vector<vector<Point> > contours;
-      MSER(13,(int)(0.00015*grey.cols*grey.rows),(int)(0.13*grey.cols*grey.rows),1,0.7)(grey, contours);
+      MSER(21,(int)(0.00002*grey.cols*grey.rows),(int)(0.05*grey.cols*grey.rows),1,0.7)(grey, contours);
     
       //Convert the output of MSER to suitable input for the grouping/recognition algorithms
       MSERsToERStats(grey, contours, regions);
@@ -86,8 +86,9 @@ int main(int argc, char* argv[])
   double t_g = getTickCount();
   vector< vector<Vec2i> > nm_region_groups;
   vector<Rect> nm_boxes;
-  erGroupingNM(image, channels, regions, nm_region_groups, nm_boxes);
-  //cout << " detected " << nm_boxes.size() << " groups from " << regions[0].size()+regions[1].size() << " regions "<< endl;
+  //erGroupingNM(image, channels, regions, nm_region_groups, nm_boxes);
+  erGrouping(image, channels, regions, nm_region_groups, nm_boxes, ERGROUPING_ORIENTATION_ANY, "./trained_classifier_erGrouping.xml", 0.5);
+  cout << " detected " << nm_boxes.size() << " groups from " << regions[0].size()+regions[1].size() << " regions "<< endl;
   cout << " Grouping time           " << ((double)getTickCount() - t_g)*1000/getTickFrequency() << " ms." << endl;
 
 
@@ -242,13 +243,13 @@ int main(int argc, char* argv[])
 
 
 
-  /*resize(out_img_detection,out_img_detection,Size(image.cols*scale_img,image.rows*scale_img));
+  resize(out_img_detection,out_img_detection,Size(image.cols*scale_img,image.rows*scale_img));
   imshow("detection", out_img_detection);
   imwrite("detection.jpg", out_img_detection);
   resize(out_img,out_img,Size(image.cols*scale_img,image.rows*scale_img));
   imshow("recognition", out_img);
   imwrite("recognition.jpg", out_img);
-  waitKey(0);*/
+  waitKey(0);
 
   return 0;
 }
