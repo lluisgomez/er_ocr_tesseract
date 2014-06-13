@@ -9,8 +9,10 @@
 #include "ergrouping_nm.h"
 #include "msers_to_erstats.h"
 
-#define REGION_TYPE 1        // 0=ERStats, 1=MSER, 2=canny+contour
+#define REGION_TYPE        0 // 0=ERStats, 1=MSER, 2=canny+contour
 #define GROUPING_ALGORITHM 0 // 0=exhaustive_search, 1=multioriented
+#define SEGMENTATION       4 // 0=B&W regions, 1=B&W regions + gaussian blur, 2=croped image, 
+                             // 3=croped image + adaptive threshold, 4= cropped image + otsu threshold
 
 using namespace cv;
 using namespace std;
@@ -38,8 +40,9 @@ int main(int argc, char* argv[])
 
   /*Text Detection*/
 
-  Mat grey;
+  Mat grey,orig_grey;
   cvtColor(image,grey,COLOR_RGB2GRAY);
+  grey.copyTo(orig_grey);
   // Extract channels to be processed individually
   vector<Mat> channels;
   channels.push_back(grey);
@@ -143,12 +146,28 @@ int main(int argc, char* argv[])
     rectangle(out_img_detection, nm_boxes[i].tl(), nm_boxes[i].br(), Scalar(0,255,255), 3);
 
     Mat group_img = Mat::zeros(image.rows+2, image.cols+2, CV_8UC1);
-    er_draw(channels, regions, nm_region_groups[i], group_img);
     Mat group_segmentation;
-    group_img.copyTo(group_segmentation);
-    //image(nm_boxes[i]).copyTo(group_img);
-    group_img(nm_boxes[i]).copyTo(group_img);
-    copyMakeBorder(group_img,group_img,15,15,15,15,BORDER_CONSTANT,Scalar(0));
+    if ((SEGMENTATION == 0)||(SEGMENTATION == 1))
+    {
+      er_draw(channels, regions, nm_region_groups[i], group_img);
+      if (SEGMENTATION == 1)
+        GaussianBlur( group_img, group_img, Size( 5, 5 ), 0, 0 );
+      group_img.copyTo(group_segmentation);
+      group_img(nm_boxes[i]).copyTo(group_img);
+      copyMakeBorder(group_img,group_img,15,15,15,15,BORDER_CONSTANT,Scalar(0));
+    } else {
+      group_segmentation = Mat::zeros(image.rows+2, image.cols+2, CV_8UC1);
+      Rect roi = (nm_boxes[i] + Size(10,10)) - Point(5,5);
+      roi.x = max(roi.x,0); roi.y = max(roi.y,0);
+      roi.width = min(image.cols-roi.x-1,roi.width); roi.height = min(image.rows-roi.y-1,roi.height);
+      cout << roi.x << "," << roi.y << "," << roi.width << "," << roi.height << endl;
+      orig_grey(roi).copyTo(group_img);
+      if (SEGMENTATION == 3)
+        adaptiveThreshold(group_img, group_img, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 11, 2);
+      if (SEGMENTATION == 4)
+        threshold(group_img, group_img, 128, 255, THRESH_BINARY|THRESH_OTSU);
+      group_img.copyTo(group_segmentation(roi));
+    }
 
     vector<Rect>   boxes;
     vector<string> words;
