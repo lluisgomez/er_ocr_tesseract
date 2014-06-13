@@ -9,7 +9,8 @@
 #include "ergrouping_nm.h"
 #include "msers_to_erstats.h"
 
-#define REGION_TYPE 1 // 0=ERStats, 1=MSER, 2=canny+contour
+#define REGION_TYPE 1        // 0=ERStats, 1=MSER, 2=canny+contour
+#define GROUPING_ALGORITHM 0 // 0=exhaustive_search, 1=multioriented
 
 using namespace cv;
 using namespace std;
@@ -80,27 +81,38 @@ int main(int argc, char* argv[])
       break;
     }
   }
-  cout << " Detection time          " << ((double)getTickCount() - t_d)*1000/getTickFrequency() << " ms." << endl;
+  cout << "TIME_REGION_DETECTION_ALT = " << ((double)getTickCount() - t_d)*1000/getTickFrequency() << endl;
     
   // Detect character groups
   double t_g = getTickCount();
   vector< vector<Vec2i> > nm_region_groups;
   vector<Rect> nm_boxes;
-  //erGroupingNM(image, channels, regions, nm_region_groups, nm_boxes);
-  erGrouping(image, channels, regions, nm_region_groups, nm_boxes, ERGROUPING_ORIENTATION_ANY, "./trained_classifier_erGrouping.xml", 0.5);
-  cout << " detected " << nm_boxes.size() << " groups from " << regions[0].size()+regions[1].size() << " regions "<< endl;
-  cout << " Grouping time           " << ((double)getTickCount() - t_g)*1000/getTickFrequency() << " ms." << endl;
+  switch (GROUPING_ALGORITHM)
+  {
+    case 0:
+    {
+      erGroupingNM(image, channels, regions, nm_region_groups, nm_boxes);
+      break;
+    }
+    case 1:
+    {
+      erGrouping(image, channels, regions, nm_region_groups, nm_boxes, ERGROUPING_ORIENTATION_ANY, "./trained_classifier_erGrouping.xml", 0.5);
+      break;
+    }
+  }
+  cout << "TIME_GROUPING_ALT = " << ((double)getTickCount() - t_g)*1000/getTickFrequency() << endl;
 
 
   /*Text Recognition (OCR)*/
 
   double t_r = getTickCount();
   OCRTesseract* ocr = new OCRTesseract();
-  cout << " OCR initialization time "<< ((double)getTickCount() - t_r)*1000/getTickFrequency() << " ms." << endl;
+  cout << "TIME_OCR_INITIALIZATION_ALT = "<< ((double)getTickCount() - t_r)*1000/getTickFrequency() << endl;
   string output;
 
   Mat out_img;
   Mat out_img_detection;
+  Mat out_img_segmentation = Mat::zeros(image.rows+2, image.cols+2, CV_8UC1);
   image.copyTo(out_img);
   image.copyTo(out_img_detection);
   float scale_img  = 600./image.rows;
@@ -116,6 +128,8 @@ int main(int argc, char* argv[])
 
     Mat group_img = Mat::zeros(image.rows+2, image.cols+2, CV_8UC1);
     er_draw(channels, regions, nm_region_groups[i], group_img);
+    Mat group_segmentation;
+    group_img.copyTo(group_segmentation);
     //image(nm_boxes[i]).copyTo(group_img);
     group_img(nm_boxes[i]).copyTo(group_img);
     copyMakeBorder(group_img,group_img,15,15,15,15,BORDER_CONSTANT,Scalar(0));
@@ -146,11 +160,12 @@ int main(int argc, char* argv[])
       Size word_size = getTextSize(words[j], FONT_HERSHEY_SIMPLEX, scale_font, 3*scale_font, NULL);
       rectangle(out_img, boxes[j].tl()-Point(3,word_size.height+3), boxes[j].tl()+Point(word_size.width,0), Scalar(255,0,255),-1);
       putText(out_img, words[j], boxes[j].tl()-Point(1,1), FONT_HERSHEY_SIMPLEX, scale_font, Scalar(255,255,255),3*scale_font);
+      out_img_segmentation = out_img_segmentation | group_segmentation;
     }
 
   }
 
-  cout << " OCR recognition time    " << ((double)getTickCount() - t_r)*1000/getTickFrequency() << " ms." << endl;
+  cout << "TIME_OCR_ALT = " << ((double)getTickCount() - t_r)*1000/getTickFrequency() << endl;
 
 
   /* Recognition evaluation with (approximate) hungarian matching and edit distances */
@@ -172,9 +187,9 @@ int main(int argc, char* argv[])
 
     if (words_detection.empty())
     {
-      cout << endl << "number of characters in gt = " << num_gt_characters << endl;
-      cout << "total edit distance = " << num_gt_characters << endl;
-      cout << "edit distance ratio = 1" << endl;
+      //cout << endl << "number of characters in gt = " << num_gt_characters << endl;
+      cout << "TOTAL_EDIT_DISTANCE_ALT = " << num_gt_characters << endl;
+      cout << "EDIT_DISTANCE_RATIO_ALT = 1" << endl;
     }
     else
     {
@@ -206,7 +221,7 @@ int main(int argc, char* argv[])
                                        min_element(assignment_mat[i].begin(),assignment_mat[i].end()));
           if (assignment_mat[i][min_dist_idx] == search_dist)
           {
-            cout << " GT word \"" << words_gt[i] << "\" best match \"" << words_detection[min_dist_idx] << "\" with dist " << assignment_mat[i][min_dist_idx] << endl;
+            //cout << " GT word \"" << words_gt[i] << "\" best match \"" << words_detection[min_dist_idx] << "\" with dist " << assignment_mat[i][min_dist_idx] << endl;
             total_edit_distance += assignment_mat[i][min_dist_idx];
             words_detection_matched.push_back(min_dist_idx);
             words_gt.erase(words_gt.begin()+i);
@@ -222,34 +237,35 @@ int main(int argc, char* argv[])
   
       for (int j=0; j<words_gt.size(); j++)
       {
-        cout << " GT word \"" << words_gt[j] << "\" no match found" << endl;
+        //cout << " GT word \"" << words_gt[j] << "\" no match found" << endl;
         total_edit_distance += words_gt[j].size();
       }
       for (int j=0; j<words_detection.size(); j++)
       {
         if (find(words_detection_matched.begin(),words_detection_matched.end(),j) == words_detection_matched.end())
         {
-          cout << " Detection word \"" << words_detection[j] << "\" no match found" << endl;
+          //cout << " Detection word \"" << words_detection[j] << "\" no match found" << endl;
           total_edit_distance += words_detection[j].size();
         }
       }
   
     
-      cout << endl << "number of characters in gt = " << num_gt_characters << endl;
-      cout << "total edit distance = " << total_edit_distance << endl;
-      cout << "edit distance ratio = " << (float)total_edit_distance / num_gt_characters << endl;
+      //cout << endl << "number of characters in gt = " << num_gt_characters << endl;
+      cout << "TOTAL_EDIT_DISTANCE_ALT = " << total_edit_distance << endl;
+      cout << "EDIT_DISTANCE_RATIO_ALT = " << (float)total_edit_distance / num_gt_characters << endl;
     }
   }
 
 
 
-  resize(out_img_detection,out_img_detection,Size(image.cols*scale_img,image.rows*scale_img));
-  imshow("detection", out_img_detection);
-  imwrite("detection.jpg", out_img_detection);
-  resize(out_img,out_img,Size(image.cols*scale_img,image.rows*scale_img));
-  imshow("recognition", out_img);
-  imwrite("recognition.jpg", out_img);
-  waitKey(0);
+  //resize(out_img_detection,out_img_detection,Size(image.cols*scale_img,image.rows*scale_img));
+  //imshow("detection", out_img_detection);
+  imwrite("detection_alt.jpg", out_img_detection);
+  //resize(out_img,out_img,Size(image.cols*scale_img,image.rows*scale_img));
+  //imshow("recognition", out_img);
+  imwrite("recognition_alt.jpg", out_img);
+  //waitKey(0);
+  imwrite("segmentation_alt.jpg", out_img_segmentation);
 
   return 0;
 }

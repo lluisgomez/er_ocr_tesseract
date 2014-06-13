@@ -14,7 +14,7 @@ OCRTesseract::OCRTesseract(const char* datapath, const char* language, const cha
     throw 1;
   } 
 
-  cout << "OCRTesseract: tesseract version " << tess.Version() << endl;
+  //cout << "OCRTesseract: tesseract version " << tess.Version() << endl;
 
   tesseract::PageSegMode pagesegmode = psmode;
   tess.SetPageSegMode(pagesegmode);
