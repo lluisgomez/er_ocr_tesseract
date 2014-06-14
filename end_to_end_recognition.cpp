@@ -37,7 +37,6 @@ int main(int argc, char* argv[])
 
   /*Text Detection*/
 
-  double t_d = getTickCount();
   // Extract channels to be processed individually
   vector<Mat> channels;
 
@@ -47,6 +46,7 @@ int main(int argc, char* argv[])
   channels.push_back(grey);
   channels.push_back(255-grey);
 
+  double t_d = getTickCount();
   // Create ERFilter objects with the 1st and 2nd stage default classifiers
   Ptr<ERFilter> er_filter1 = createERFilterNM1(loadClassifierNM1("trained_classifierNM1.xml"),8,0.00015,0.13,0.2,true,0.1);
   Ptr<ERFilter> er_filter2 = createERFilterNM2(loadClassifierNM2("trained_classifierNM2.xml"),0.5);
