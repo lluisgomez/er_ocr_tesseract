@@ -151,7 +151,7 @@ int main(int argc, char* argv[])
     {
       er_draw(channels, regions, nm_region_groups[i], group_img);
       if (SEGMENTATION == 1)
-        GaussianBlur( group_img, group_img, Size( 5, 5 ), 0, 0 );
+        GaussianBlur( group_img, group_img, Size( 3, 3 ), 0, 0 );
       group_img.copyTo(group_segmentation);
       group_img(nm_boxes[i]).copyTo(group_img);
       copyMakeBorder(group_img,group_img,15,15,15,15,BORDER_CONSTANT,Scalar(0));
