@@ -10,8 +10,8 @@
 #include "msers_to_erstats.h"
 
 #define REGION_TYPE        0 // 0=ERStats, 1=MSER, 2=canny+contour
-#define GROUPING_ALGORITHM 0 // 0=exhaustive_search, 1=multioriented
-#define SEGMENTATION       4 // 0=B&W regions, 1=B&W regions + gaussian blur, 2=croped image, 
+#define GROUPING_ALGORITHM 1 // 0=exhaustive_search, 1=exhaustive_search + feedback loop, 2=multioriented
+#define SEGMENTATION       0 // 0=B&W regions, 1=B&W regions + gaussian blur, 2=croped image, 
                              // 3=croped image + adaptive threshold, 4= cropped image + otsu threshold
 
 using namespace cv;
@@ -110,10 +110,15 @@ int main(int argc, char* argv[])
   {
     case 0:
     {
-      erGroupingNM(image, channels, regions, nm_region_groups, nm_boxes);
+      erGroupingNM(image, channels, regions, nm_region_groups, nm_boxes, false);
       break;
     }
     case 1:
+    {
+      erGroupingNM(image, channels, regions, nm_region_groups, nm_boxes, true);
+      break;
+    }
+    case 2:
     {
       erGrouping(image, channels, regions, nm_region_groups, nm_boxes, ERGROUPING_ORIENTATION_ANY, "./trained_classifier_erGrouping.xml", 0.5);
       break;

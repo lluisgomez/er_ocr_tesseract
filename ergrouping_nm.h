@@ -168,7 +168,7 @@ bool haveCommonRegion(region_triplet &t1, region_triplet &t2);
 // in regions the set of ER's extracted by ERFilter
 // in _src the channels from which the ER's were extracted
 // out sets of regions, each one represents a possible text line
-void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::vector<ERStat> >& regions,  std::vector< std::vector<Vec2i> >& groups, std::vector<Rect> &boxes);
+void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::vector<ERStat> >& regions,  std::vector< std::vector<Vec2i> >& groups, std::vector<Rect> &boxes, bool do_feedback_loop);
 
 // Fit line from two points
 // out a0 is the intercept
@@ -610,6 +610,8 @@ bool haveCommonRegion(region_sequence &sequence1, region_sequence &sequence2)
     return false;
 }
 
+bool sort_couples (Vec3i i,Vec3i j) { return (i[0]<j[0]); }
+
 
 // Takes as input the set of ER's extracted by ERFilter
 // then finds for all valid pairs and triplets.
@@ -617,7 +619,7 @@ bool haveCommonRegion(region_sequence &sequence1, region_sequence &sequence2)
 // in _src the channels from which the ER's were extracted
 // out sets of regions, each one represents a possible text line
 void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::vector<ERStat> >& regions,
-                  std::vector< std::vector<Vec2i> >& out_groups, std::vector<Rect>& out_boxes)
+                  std::vector< std::vector<Vec2i> >& out_groups, std::vector<Rect>& out_boxes, bool do_feedback_loop)
 {
 
     std::vector<Mat> src;
@@ -766,7 +768,168 @@ void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::v
     
     
         //cout << "GroupingNM : detected " << valid_sequences.size() << " sequences." << endl;
-    
+
+        if (do_feedback_loop)
+        {
+
+            //Feedback loop of detected lines to region extraction ... tries to recover missmatches in the region decomposition step by extracting regions in the neighbourhood of a valid sequence and checking if they are consistent with its line estimates
+            Ptr<ERFilter> er_filter = createERFilterNM1(loadClassifierNM1("trained_classifierNM1.xml"),1,0.005,0.3,0.,true,0.1);
+            for (int i=0; i<valid_sequences.size(); i++)
+            {
+                vector<Point> bbox_points;
+
+                for (size_t j=0; j<valid_sequences[i].triplets.size(); j++)
+                {
+                    bbox_points.push_back(regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect.tl());
+                    bbox_points.push_back(regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect.br());
+                    bbox_points.push_back(regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect.tl());
+                    bbox_points.push_back(regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect.br());
+                    bbox_points.push_back(regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect.tl());
+                    bbox_points.push_back(regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect.br());
+                }
+
+                Rect rect = boundingRect(bbox_points);
+                rect.x = max(rect.x,0);
+                rect.y = max(rect.y,0);
+                rect.width = min(rect.width,src[c].cols-rect.x);
+                rect.height = min(rect.height,src[c].rows-rect.y);
+
+                vector<ERStat> aux_regions;
+                Mat tmp;
+                src[c](rect).copyTo(tmp);
+                //                    imshow("tmp",tmp);
+                //                    waitKey(0);
+                er_filter->run(tmp, aux_regions);
+                //cout << aux_regions.size() << " possible regions detected" << endl;
+
+                for(size_t r=0; r<aux_regions.size(); r++)
+                {
+                    aux_regions[r].rect   = aux_regions[r].rect + Point(rect.x,rect.y);
+                    aux_regions[r].pixel  = ((aux_regions[r].pixel/tmp.cols)+rect.y)*src[c].cols + (aux_regions[r].pixel%tmp.cols) + rect.x;
+                    bool overlaps = false;
+                    for (size_t j=0; j<valid_sequences[i].triplets.size(); j++)
+                    {
+                        Rect minarearect_a  = regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect | aux_regions[r].rect;
+                        Rect minarearect_b  = regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect | aux_regions[r].rect;
+                        Rect minarearect_c  = regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect | aux_regions[r].rect;
+                        //                    cout << "    (" << aux_regions[r].rect.x << ","  << aux_regions[r].rect.y << "," << aux_regions[r].rect.width << "," << aux_regions[r].rect.height <<  ")" << endl;
+                        //                    cout << "    (" << regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect.x << ","  << regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect.y << "," << regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect.width << "," << regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect.height <<  ")" << endl;
+                        //                    cout << "    (" << regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect.x << ","  << regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect.y << "," << regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect.width << "," << regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect.height <<  ")" << endl;
+                        //                    cout << "    (" << regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect.x << ","  << regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect.y << "," << regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect.width << "," << regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect.height <<  ")" << endl << endl;
+
+                        // Overlapping regions are not valid pair in any case
+                        if ( (minarearect_a == aux_regions[r].rect) ||
+                             (minarearect_b == aux_regions[r].rect) ||
+                             (minarearect_c == aux_regions[r].rect) ||
+                             (minarearect_a == regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect) ||
+                             (minarearect_b == regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect) ||
+                             (minarearect_c == regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect) )
+
+                        {
+                            //cout << "its overlap!" << endl;
+                            overlaps = true;
+                            break;
+                        }
+                    }
+                    if (!overlaps)
+                    {
+                        //cout << "NO overlap" << endl;
+                        //now check if it has at least one valid pair
+                        vector<Vec3i> left_couples, right_couples;
+                        regions[c].push_back(aux_regions[r]);
+                        for (size_t j=0; j<valid_sequences[i].triplets.size(); j++)
+                        {
+                            if (isValidPair(grey, lab, mask, src, regions, valid_sequences[i].triplets[j].a, Vec2i(c,regions[c].size()-1)))
+                            {
+                                //cout << "has a pair !" << endl;
+                                if (regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect.x > aux_regions[r].rect.x)
+                                    right_couples.push_back(Vec3i(regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect.x - aux_regions[r].rect.x, valid_sequences[i].triplets[j].a[0],valid_sequences[i].triplets[j].a[1]));
+                                else
+                                    left_couples.push_back(Vec3i(aux_regions[r].rect.x - regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect.x, valid_sequences[i].triplets[j].a[0],valid_sequences[i].triplets[j].a[1]));
+                            }
+                            if (isValidPair(grey, lab, mask, src, regions, valid_sequences[i].triplets[j].b, Vec2i(c,regions[c].size()-1)))
+                            {
+                                //cout << "has a pair !" << endl;
+                                if (regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect.x > aux_regions[r].rect.x)
+                                    right_couples.push_back(Vec3i(regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect.x - aux_regions[r].rect.x, valid_sequences[i].triplets[j].b[0],valid_sequences[i].triplets[j].b[1]));
+                                else
+                                    left_couples.push_back(Vec3i(aux_regions[r].rect.x - regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect.x, valid_sequences[i].triplets[j].b[0],valid_sequences[i].triplets[j].b[1]));
+                            }
+                            if (isValidPair(grey, lab, mask, src, regions, valid_sequences[i].triplets[j].c, Vec2i(c,regions[c].size()-1)))
+                            {
+                                //cout << "has a pair !" << endl;
+                                if (regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect.x > aux_regions[r].rect.x)
+                                    right_couples.push_back(Vec3i(regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect.x - aux_regions[r].rect.x, valid_sequences[i].triplets[j].c[0],valid_sequences[i].triplets[j].c[1]));
+                                else
+                                    left_couples.push_back(Vec3i(aux_regions[r].rect.x - regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect.x, valid_sequences[i].triplets[j].c[0],valid_sequences[i].triplets[j].c[1]));
+                            }
+                        }
+
+                        //make it part of a triplet and check if line estimates is consistent with the sequence
+                        vector<region_triplet> valid_triplets;
+                        if(!left_couples.empty() && !right_couples.empty())
+                        {
+                            sort(left_couples.begin(), left_couples.end(), sort_couples);
+                            sort(right_couples.begin(), right_couples.end(), sort_couples);
+                            region_pair pair1(Vec2i(left_couples[0][1],left_couples[0][2]),Vec2i(c,regions[c].size()-1));
+                            region_pair pair2(Vec2i(c,regions[c].size()-1), Vec2i(right_couples[0][1],right_couples[0][2]));
+                            region_triplet triplet(Vec2i(0,0),Vec2i(0,0),Vec2i(0,0));
+                            if (isValidTriplet(regions, pair1, pair2, triplet))
+                            {
+                                //cout << "Valid triplet here !!" << endl;
+                                valid_triplets.push_back(triplet);
+                            }
+                        }
+                        else if (right_couples.size() >= 2)
+                        {
+                            sort(right_couples.begin(), right_couples.end(), sort_couples);
+                            region_pair pair1(Vec2i(c,regions[c].size()-1), Vec2i(right_couples[0][1],right_couples[0][2]));
+                            region_pair pair2(Vec2i(right_couples[0][1],right_couples[0][2]), Vec2i(right_couples[1][1],right_couples[1][2]));
+                            region_triplet triplet(Vec2i(0,0),Vec2i(0,0),Vec2i(0,0));
+                            if (isValidTriplet(regions, pair1, pair2, triplet))
+                            {
+                                //cout << "Valid triplet here !!" << endl;
+                                valid_triplets.push_back(triplet);
+                            }
+                        }
+                        else if (left_couples.size() >=2)
+                        {
+                            sort(left_couples.begin(), left_couples.end(), sort_couples);
+                            region_pair pair1(Vec2i(right_couples[1][1],right_couples[1][2]), Vec2i(right_couples[0][1],right_couples[0][2]));
+                            region_pair pair2(Vec2i(right_couples[0][1],right_couples[0][2]),Vec2i(c,regions[c].size()-1));
+                            region_triplet triplet(Vec2i(0,0),Vec2i(0,0),Vec2i(0,0));
+                            if (isValidTriplet(regions, pair1, pair2, triplet))
+                            {
+                                //cout << "Valid triplet here !!" << endl;
+                                valid_triplets.push_back(triplet);
+                            }
+                        }
+                        else
+                        {
+                            //cout << "no possible triplet found !" << endl;
+                            continue;
+                        }
+
+                        //check if line estimates is consistent with the sequence
+                        for (size_t t=0; t<valid_triplets.size(); t++)
+                        {
+                            region_sequence sequence(valid_triplets[t]);
+                            if (isValidSequence(valid_sequences[i],sequence))
+                            {
+                                //cout << "Valid sequence!" << endl;
+                                valid_sequences[i].triplets.push_back(valid_triplets[t]);
+                            }
+
+                        }
+                    }
+                    //                    rectangle(img, aux_regions[r].rect.tl(), aux_regions[r].rect.br(), Scalar(255,0,0));
+                    //                    imshow("candidate",img(rect));
+                    //                    waitKey(0);
+                }
+            }
+
+        }
+
     
         // Prepare the sequences for output
         for (size_t i=0; i<valid_sequences.size(); i++)

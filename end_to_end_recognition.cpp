@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
   // Detect character groups
   vector< vector<Vec2i> > nm_region_groups;
   vector<Rect> nm_boxes;
-  erGroupingNM(image, channels, regions, nm_region_groups, nm_boxes);
+  erGroupingNM(image, channels, regions, nm_region_groups, nm_boxes, false);
   cout << "TIME_GROUPING = " << ((double)getTickCount() - t_g)*1000/getTickFrequency() << endl;
 
 
