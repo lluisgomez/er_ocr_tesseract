@@ -895,8 +895,8 @@ void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::v
                         else if (left_couples.size() >=2)
                         {
                             sort(left_couples.begin(), left_couples.end(), sort_couples);
-                            region_pair pair1(Vec2i(right_couples[1][1],right_couples[1][2]), Vec2i(right_couples[0][1],right_couples[0][2]));
-                            region_pair pair2(Vec2i(right_couples[0][1],right_couples[0][2]),Vec2i(c,regions[c].size()-1));
+                            region_pair pair1(Vec2i(left_couples[1][1],left_couples[1][2]), Vec2i(left_couples[0][1],left_couples[0][2]));
+                            region_pair pair2(Vec2i(left_couples[0][1],left_couples[0][2]),Vec2i(c,regions[c].size()-1));
                             region_triplet triplet(Vec2i(0,0),Vec2i(0,0),Vec2i(0,0));
                             if (isValidTriplet(regions, pair1, pair2, triplet))
                             {
