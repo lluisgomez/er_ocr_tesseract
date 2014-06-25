@@ -789,10 +789,10 @@ void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::v
                 }
 
                 Rect rect = boundingRect(bbox_points);
-                rect.x = max(rect.x,0);
-                rect.y = max(rect.y,0);
-                rect.width = min(rect.width,src[c].cols-rect.x);
-                rect.height = min(rect.height,src[c].rows-rect.y);
+                rect.x = max(rect.x-10,0);
+                rect.y = max(rect.y-10,0);
+                rect.width = min(rect.width+20,src[c].cols-rect.x);
+                rect.height = min(rect.height+20,src[c].rows-rect.y);
 
                 vector<ERStat> aux_regions;
                 Mat tmp;
@@ -804,7 +804,7 @@ void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::v
 
                 for(size_t r=0; r<aux_regions.size(); r++)
                 {
-                    if ((aux_regions[r].rect.x == 0)||(aux_regions[r].rect.br().x >= tmp.rows))
+                    if ((aux_regions[r].rect.y == 0)||(aux_regions[r].rect.br().y >= tmp.rows))
                       continue;
 
                     aux_regions[r].rect   = aux_regions[r].rect + Point(rect.x,rect.y);
