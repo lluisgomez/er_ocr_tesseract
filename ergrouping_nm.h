@@ -575,13 +575,16 @@ bool isValidSequence(region_sequence &sequence1, region_sequence &sequence2)
     {
         for (size_t j=0; j<sequence1.triplets.size(); j++)
         {
-            if (distanceLinesEstimates(sequence2.triplets[i].estimates,
-                                       sequence1.triplets[j].estimates) > SEQUENCE_MAX_TRIPLET_DIST)
-                return false;
+            if ((distanceLinesEstimates(sequence2.triplets[i].estimates,
+                                       sequence1.triplets[j].estimates) < SEQUENCE_MAX_TRIPLET_DIST) &&
+                ((float)min(abs(sequence2.triplets[i].estimates.x_max-sequence2.triplets[j].estimates.x_min),
+                            abs(sequence2.triplets[j].estimates.x_max-sequence2.triplets[i].estimates.x_min))/
+                        max(sequence2.triplets[i].estimates.h_max,sequence2.triplets[j].estimates.h_max) < 3*PAIR_MAX_REGION_DIST)) 
+                return true;
         }
     }
 
-    return true;
+    return false;
 }
 
 // Check if two triplets share a region in common
