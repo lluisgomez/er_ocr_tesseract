@@ -804,6 +804,9 @@ void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::v
 
                 for(size_t r=0; r<aux_regions.size(); r++)
                 {
+                    if ((aux_regions[r].rect.x == 0)||(aux_regions[r].rect.br().x >= tmp.rows))
+                      continue;
+
                     aux_regions[r].rect   = aux_regions[r].rect + Point(rect.x,rect.y);
                     aux_regions[r].pixel  = ((aux_regions[r].pixel/tmp.cols)+rect.y)*src[c].cols + (aux_regions[r].pixel%tmp.cols) + rect.x;
                     bool overlaps = false;
