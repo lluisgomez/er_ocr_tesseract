@@ -800,10 +800,7 @@ void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::v
                 vector<ERStat> aux_regions;
                 Mat tmp;
                 src[c](rect).copyTo(tmp);
-                //                    imshow("tmp",tmp);
-                //                    waitKey(0);
                 er_filter->run(tmp, aux_regions);
-                //cout << aux_regions.size() << " possible regions detected" << endl;
 
                 for(size_t r=0; r<aux_regions.size(); r++)
                 {
@@ -818,10 +815,6 @@ void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::v
                         Rect minarearect_a  = regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect | aux_regions[r].rect;
                         Rect minarearect_b  = regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect | aux_regions[r].rect;
                         Rect minarearect_c  = regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect | aux_regions[r].rect;
-                        //                    cout << "    (" << aux_regions[r].rect.x << ","  << aux_regions[r].rect.y << "," << aux_regions[r].rect.width << "," << aux_regions[r].rect.height <<  ")" << endl;
-                        //                    cout << "    (" << regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect.x << ","  << regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect.y << "," << regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect.width << "," << regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect.height <<  ")" << endl;
-                        //                    cout << "    (" << regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect.x << ","  << regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect.y << "," << regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect.width << "," << regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect.height <<  ")" << endl;
-                        //                    cout << "    (" << regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect.x << ","  << regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect.y << "," << regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect.width << "," << regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect.height <<  ")" << endl << endl;
 
                         // Overlapping regions are not valid pair in any case
                         if ( (minarearect_a == aux_regions[r].rect) ||
@@ -832,14 +825,12 @@ void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::v
                              (minarearect_c == regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect) )
 
                         {
-                            //cout << "its overlap!" << endl;
                             overlaps = true;
                             break;
                         }
                     }
                     if (!overlaps)
                     {
-                        //cout << "NO overlap" << endl;
                         //now check if it has at least one valid pair
                         vector<Vec3i> left_couples, right_couples;
                         regions[c].push_back(aux_regions[r]);
@@ -847,7 +838,6 @@ void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::v
                         {
                             if (isValidPair(grey, lab, mask, src, regions, valid_sequences[i].triplets[j].a, Vec2i(c,regions[c].size()-1)))
                             {
-                                //cout << "has a pair !" << endl;
                                 if (regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect.x > aux_regions[r].rect.x)
                                     right_couples.push_back(Vec3i(regions[valid_sequences[i].triplets[j].a[0]][valid_sequences[i].triplets[j].a[1]].rect.x - aux_regions[r].rect.x, valid_sequences[i].triplets[j].a[0],valid_sequences[i].triplets[j].a[1]));
                                 else
@@ -855,7 +845,6 @@ void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::v
                             }
                             if (isValidPair(grey, lab, mask, src, regions, valid_sequences[i].triplets[j].b, Vec2i(c,regions[c].size()-1)))
                             {
-                                //cout << "has a pair !" << endl;
                                 if (regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect.x > aux_regions[r].rect.x)
                                     right_couples.push_back(Vec3i(regions[valid_sequences[i].triplets[j].b[0]][valid_sequences[i].triplets[j].b[1]].rect.x - aux_regions[r].rect.x, valid_sequences[i].triplets[j].b[0],valid_sequences[i].triplets[j].b[1]));
                                 else
@@ -863,7 +852,6 @@ void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::v
                             }
                             if (isValidPair(grey, lab, mask, src, regions, valid_sequences[i].triplets[j].c, Vec2i(c,regions[c].size()-1)))
                             {
-                                //cout << "has a pair !" << endl;
                                 if (regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect.x > aux_regions[r].rect.x)
                                     right_couples.push_back(Vec3i(regions[valid_sequences[i].triplets[j].c[0]][valid_sequences[i].triplets[j].c[1]].rect.x - aux_regions[r].rect.x, valid_sequences[i].triplets[j].c[0],valid_sequences[i].triplets[j].c[1]));
                                 else
@@ -882,7 +870,6 @@ void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::v
                             region_triplet triplet(Vec2i(0,0),Vec2i(0,0),Vec2i(0,0));
                             if (isValidTriplet(regions, pair1, pair2, triplet))
                             {
-                                //cout << "Valid triplet here !!" << endl;
                                 valid_triplets.push_back(triplet);
                             }
                         }
@@ -894,7 +881,6 @@ void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::v
                             region_triplet triplet(Vec2i(0,0),Vec2i(0,0),Vec2i(0,0));
                             if (isValidTriplet(regions, pair1, pair2, triplet))
                             {
-                                //cout << "Valid triplet here !!" << endl;
                                 valid_triplets.push_back(triplet);
                             }
                         }
@@ -906,13 +892,12 @@ void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::v
                             region_triplet triplet(Vec2i(0,0),Vec2i(0,0),Vec2i(0,0));
                             if (isValidTriplet(regions, pair1, pair2, triplet))
                             {
-                                //cout << "Valid triplet here !!" << endl;
                                 valid_triplets.push_back(triplet);
                             }
                         }
                         else
                         {
-                            //cout << "no possible triplet found !" << endl;
+                            // no possible triplet found
                             continue;
                         }
 
@@ -922,15 +907,11 @@ void erGroupingNM(cv::Mat &img, cv::InputArrayOfArrays _src, std::vector< std::v
                             region_sequence sequence(valid_triplets[t]);
                             if (isValidSequence(valid_sequences[i],sequence))
                             {
-                                //cout << "Valid sequence!" << endl;
                                 valid_sequences[i].triplets.push_back(valid_triplets[t]);
                             }
 
                         }
                     }
-                    //                    rectangle(img, aux_regions[r].rect.tl(), aux_regions[r].rect.br(), Scalar(255,0,0));
-                    //                    imshow("candidate",img(rect));
-                    //                    waitKey(0);
                 }
             }
 
