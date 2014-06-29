@@ -253,6 +253,7 @@ int main(int argc, char* argv[])
   
       int total_edit_distance = 0;
       int assigned_gt_words=0;
+      int tp=0, fp=0, fn=0; 
       for (int search_dist=0; search_dist<=max_dist; search_dist++)
       {
         for (int i=0; i<assignment_mat.size(); i++)
@@ -262,6 +263,10 @@ int main(int argc, char* argv[])
           if (assignment_mat[i][min_dist_idx] == search_dist)
           {
             //cout << " GT word \"" << words_gt[i] << "\" best match \"" << words_detection[min_dist_idx] << "\" with dist " << assignment_mat[i][min_dist_idx] << endl;
+            if(search_dist == 0) 
+		tp++;
+            else { fp++; fn++; }
+
             total_edit_distance += assignment_mat[i][min_dist_idx];
             words_detection_matched.push_back(min_dist_idx);
             words_gt.erase(words_gt.begin()+i);
@@ -278,6 +283,7 @@ int main(int argc, char* argv[])
       for (int j=0; j<words_gt.size(); j++)
       {
         //cout << " GT word \"" << words_gt[j] << "\" no match found" << endl;
+        fn++;
         total_edit_distance += words_gt[j].size();
       }
       for (int j=0; j<words_detection.size(); j++)
@@ -285,6 +291,7 @@ int main(int argc, char* argv[])
         if (find(words_detection_matched.begin(),words_detection_matched.end(),j) == words_detection_matched.end())
         {
           //cout << " Detection word \"" << words_detection[j] << "\" no match found" << endl;
+          fp++;
           total_edit_distance += words_detection[j].size();
         }
       }
@@ -293,6 +300,9 @@ int main(int argc, char* argv[])
       //cout << endl << "number of characters in gt = " << num_gt_characters << endl;
       cout << "TOTAL_EDIT_DISTANCE_ALT = " << total_edit_distance << endl;
       cout << "EDIT_DISTANCE_RATIO_ALT = " << (float)total_edit_distance / num_gt_characters << endl;
+      cout << "TP_ALT = " << tp << endl;
+      cout << "FP_ALT = " << fp << endl;
+      cout << "FN_ALT = " << fn << endl;
     }
   }
 
