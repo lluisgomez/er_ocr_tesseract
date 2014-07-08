@@ -221,12 +221,12 @@ void OCRHMMClassifier::eval( InputArray src, InputArray mask, vector<int>& out_c
   {
     for (int j=0; j<16; j++)
     {
-      cout << " " << ((int)tmp.at<uchar>(i,j)==0)?0:1;
+      //cout << " " << ((int)tmp.at<uchar>(i,j)==0)?0:1;
       sample.at<double>(0,i*16+j) = ((int)tmp.at<uchar>(i,j)==0)?1:0;
     }
-    cout << endl;
+    //cout << endl;
   }
-  cout << Mat(sample) << endl;
+  //cout << Mat(sample) << endl;
 
   Mat predictions;
   mlp.predict( sample, predictions);
