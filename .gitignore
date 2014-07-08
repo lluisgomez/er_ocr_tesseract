@@ -7,3 +7,10 @@ pipeline_comparison
 .*swp
 test
 results
+CMakeCache.txt
+CMakeFiles
+Makefile
+cmake_install.cmake
+extract_features
+mlp_train
+*.tiff
