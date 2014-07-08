@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "ocr_tesseract.h"
+#include "ocr_hmm_decoder.h"
 #include "ergrouping_nm.h"
 #include "msers_to_erstats.h"
 
@@ -37,6 +38,8 @@ int main(int argc, char* argv[])
     cout << "Usage: " << argv[0] << " <img_filename> <gt_word1> <gt_word2> ... <gt_wordN>" << endl;
     return(0);
   }
+
+
 
   /*Text Detection*/
 
@@ -126,6 +129,17 @@ int main(int argc, char* argv[])
   }
   cout << "TIME_GROUPING_ALT = " << ((double)getTickCount() - t_g)*1000/getTickFrequency() << endl;
 
+  /*test*/
+
+  Mat transition_p = Mat(62,62,CV_64FC1);
+  string filename = "transitions_OCRHMM.xml";
+  FileStorage fs(filename, FileStorage::READ);
+  fs["transition_probabilities"] >> transition_p;
+  Mat emission_p = Mat::eye(62,62,CV_64FC1);
+
+
+  string voc = "abcdefghijklmnopqrtsuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  OCRHMMDecoder decoder(loadOCRHMMClassifier("ocr_hmm_decoder_train/mlp_mask/trained_mlp.xml"), voc, transition_p, emission_p);
 
   /*Text Recognition (OCR)*/
 
@@ -178,6 +192,12 @@ int main(int argc, char* argv[])
     vector<string> words;
     vector<float>  confidences;
     ocr->run(group_img, output, &boxes, &words, &confidences, OCR_LEVEL_WORD);
+  
+    /*Test*/
+    string out;
+    decoder.run(group_img,group_img,out);
+    cout << " !!!!!!!!!!!!!!!!!!!!!!!!!! "<< endl << out << endl;
+    cout << " !!!!!!!!!!!!!!!!!!!!!!!!!! "<< endl;
 
     output.erase(remove(output.begin(), output.end(), '\n'), output.end());
     //cout << "OCR output = \"" << output << "\" lenght = " << output.size() << endl;
