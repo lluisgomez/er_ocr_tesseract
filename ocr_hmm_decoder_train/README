@@ -1,0 +1,4 @@
+Each folder contains training stuff for different variants of features:
+
+  mlp_mask/  trains a MPL with binary data (synthetically generated) and features extracted from chain code (N&M ACCV2010)
+  mlp_grey/   trains a MPL with grey scale data (from char datasets) and unsupervised feature learning (Coates et al. ICDAR2011)
