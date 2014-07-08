@@ -1,7 +1,7 @@
 import subprocess
 import sys
 
-alt_name = "MSER alternative"
+alt_name = "Feedback Loop"
 
 with open("test/list.txt") as f:
   content = f.readlines()
@@ -17,6 +17,12 @@ total_time_grouping_alt = 0.0
 total_time_ocr = 0.0
 total_time_ocr_alt = 0.0
 counter = 0
+tp=0
+fp=0
+fn=0
+tp_alt=0
+fp_alt=0
+fn_alt=0
 for line in content:
   print line
   if (counter>=0):
@@ -41,6 +47,12 @@ for line in content:
     total_time_grouping_alt += TIME_GROUPING_ALT
     total_time_ocr += TIME_OCR
     total_time_ocr_alt += TIME_OCR_ALT
+    tp += TP 
+    tp_alt += TP_ALT
+    fp += FP 
+    fp_alt += FP_ALT
+    fn += FN 
+    fn_alt += FN_ALT
 
     #convert label on top of original image
     #subprocess.call(["convert", args[0], "-geometry", "640x", "tmp1.jpg"])
@@ -132,67 +144,12 @@ print "Avg. edit distance ratio     = "+str(edit_distance_ratio/counter)
 print "Avg. time regions extraction = "+str(total_time_regions/counter)
 print "Avg. time grouping           = "+str(total_time_grouping/counter)
 print "Avg. time ocr                = "+str(total_time_ocr/counter)
+print "End-to-end F-score           = "+str(2.0*tp/(2*tp+fp+fn)) 
 print "(alternative) Total edit distance          = "+str(total_edit_distance_alt)
 print "(alternative) Avg. edit distance ratio     = "+str(edit_distance_ratio_alt/counter)
 print "(alternative) Avg. time regions extraction = "+str(total_time_regions_alt/counter)
 print "(alternative) Avg. time grouping           = "+str(total_time_grouping_alt/counter)
 print "(alternative) Avg. time ocr                = "+str(total_time_ocr_alt/counter)
+print "(alternative) End-to-end F-score           = "+str(2.0*tp_alt/(2*tp_alt+fp_alt+fn_alt)) 
 quit()
 
-filename = str(sys.argv[1])
-
-execfile(filename)
-
-
-
-#convert label on top of original image
-subprocess.call(["convert", str(ID)+".jpg", "-geometry", "640x", "tmp1.jpg"])
-label = "Original Image"
-subprocess.call(["convert", "tmp1.jpg", "-background", "white", "-size", "x39", "label:"+label, "+swap", "-gravity", "Center", "-append", "label_tmp1.jpg"])
-
-#convert label on bottom of original image
-subprocess.call(["convert", "label_tmp1.jpg", "-background", "white", "-size", "x39", "label: ", "-gravity", "Center", "-append", "label_tmp1.jpg"])
-subprocess.call(["convert", "label_tmp1.jpg", "-background", "white", "-size", "x39", "label: ", "-gravity", "Center", "-append", "label_tmp1.jpg"])
-
-#convert label on top of GK image
-subprocess.call(["convert", "GK1_"+str(ID)+".jpg", "-geometry", "640x", "tmp2.jpg"])
-label = "Grouping GK (each channel independently)"
-subprocess.call(["convert", "tmp2.jpg", "-background", "white", "-size", "x39", "label:"+label, "+swap", "-gravity", "Center", "-append", "label_tmp2.jpg"])
-
-#convert label on bottom of GK image
-label = "Time for grouping = "+str(int(TIME_GK_1by1))+" ms."
-subprocess.call(["convert", "label_tmp2.jpg", "-background", "white", "-size", "x39", "label:"+label, "-gravity", "Center", "-append", "label_tmp2.jpg"])
-label = "(Avg x channel "+str(int(TIME_GK_1by1/9))+" ms.)"
-subprocess.call(["convert", "label_tmp2.jpg", "-background", "white", "-size", "x39", "label:"+label, "-gravity", "Center", "-append", "label_tmp2.jpg"])
-
-
-#convert label on top of NM image
-subprocess.call(["convert", "NM1_"+str(ID)+".jpg", "-geometry", "640x", "tmp3.jpg"])
-label = "Grouping NM (each channel independently)"
-subprocess.call(["convert", "tmp3.jpg", "-background", "white", "-size", "x39", "label:"+label, "+swap", "-gravity", "Center", "-append", "label_tmp3.jpg"])
-
-#convert label on bottom of NM image
-label = "Time for grouping = "+str(int(TIME_NM_1by1))+"ms."
-subprocess.call(["convert", "label_tmp3.jpg", "-background", "white", "-size", "x39", "label:"+label, "-gravity", "Center", "-append", "label_tmp3.jpg"])
-label = "(Avg x channel "+str(int(TIME_NM_1by1/9))+" ms.)"
-subprocess.call(["convert", "label_tmp3.jpg", "-background", "white", "-size", "x39", "label:"+label, "-gravity", "Center", "-append", "label_tmp3.jpg"])
-
-
-
-#convert label on top of NM2 image
-subprocess.call(["convert", "NMall_"+str(ID)+".jpg", "-geometry", "640x", "tmp4.jpg"])
-label = "Grouping NM (all channels together)"
-subprocess.call(["convert", "tmp4.jpg", "-background", "white", "-size", "x39", "label:"+label, "+swap", "-gravity", "Center", "-append", "label_tmp4.jpg"])
-
-#convert label on bottom of NM2 image
-label = "Time for grouping = "+str(int(TIME_NM_all))+"ms."
-subprocess.call(["convert", "label_tmp4.jpg", "-background", "white", "-size", "x39", "label:"+label, "-gravity", "Center", "-append", "label_tmp4.jpg"])
-label = "(Avg x channel "+str(int(TIME_NM_all/9))+" ms.)"
-subprocess.call(["convert", "label_tmp4.jpg", "-background", "white", "-size", "x39", "label:"+label, "-gravity", "Center", "-append", "label_tmp4.jpg"])
-
-#montage composed image
-subprocess.call(["montage", "label_tmp1.jpg", "label_tmp2.jpg", "label_tmp3.jpg", "label_tmp4.jpg", "-tile", "4x1", "-geometry", "640x+10+20", "montage_tmp.jpg"])
-
-#convert label on top of montage image
-label = str(ID)+".jpg ("+str(IMAGE_W)+"x"+str(IMAGE_H)+" pixels) ERFilter total time: "+str(int(TIME_ER_1st+TIME_ER_2nd))+"ms.\n1st stage ERFilter got "+str(NUM_ER_1st)+" regions from 9 channels in "+str(TIME_ER_1st)+" ms. (Avg. per channel: "+str(NUM_ER_1st/9)+" regions in "+str(int(TIME_ER_1st/9))+"ms. )\n2nd stage ERFilter got "+str(NUM_ER_2nd)+" regions from 9 channels in "+str(int(TIME_ER_2nd))+" ms. (Avg. per channel: "+str(int(NUM_ER_2nd/9))+" regions in "+str(int(TIME_ER_2nd/9))+"ms. )"
-subprocess.call(["convert", "montage_tmp.jpg", "-background", "white", "-size", "x99", "label:"+label, "+swap", "-gravity", "Center", "-append", "montage_"+str(ID)+".jpg"])
