@@ -287,8 +287,10 @@ void OCRHMMClassifier::eval( InputArray _src, InputArray _mask, vector<int>& out
   //On each bitmap a regular 7x7 Gaussian masks are evenly placed
   for (int i=0; i<maps.size(); i++)
   {
+    copyMakeBorder(maps[i],maps[i],7,7,7,7,BORDER_CONSTANT,Scalar(0));
     GaussianBlur(maps[i], maps[i], Size(7,7), 7, 7);
     normalize(maps[i],maps[i],0,255,NORM_MINMAX);
+    resize(maps[i],maps[i],Size(image_width,image_height));
   }
 
   //Generate features for each bitmap
@@ -303,7 +305,7 @@ void OCRHMMClassifier::eval( InputArray _src, InputArray _mask, vector<int>& out
         maps[i](Rect(x,y,7,7)).copyTo(patch);
         Scalar mean,std;
         meanStdDev(patch,mean,std);
-        sample.at<double>(0,i*25+((int)x/7)+((int)y/7)*5) = mean[0];
+        sample.at<double>(0,i*25+((int)x/7)+((int)y/7)*5) = mean[0]/255;
         //cout << " avg " << mean[0] << " in patch " << x << "," << y << " channel " << i << " idx = " << i*25+((int)x/7)+((int)y/7)*5<< endl;
       }
     }
