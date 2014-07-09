@@ -32,7 +32,7 @@ int main (int argc, char* argv[])
     }
     else if (contours.size()>2)
     {
-      cout << "Error: inconsistent number of contours" << endl;
+      cout << "Error: inconsistent number of contours " << contours.size() << endl;
       return(-1);
     }
     Rect bbox = boundingRect(contours[idx]);
@@ -123,8 +123,10 @@ int main (int argc, char* argv[])
     //On each bitmap a regular 7x7 Gaussian masks are evenly placed
     for (int i=0; i<maps.size(); i++)
     {
+      copyMakeBorder(maps[i],maps[i],7,7,7,7,BORDER_CONSTANT,Scalar(0));
       GaussianBlur(maps[i], maps[i], Size(7,7), 7, 7);
       normalize(maps[i],maps[i],0,255,NORM_MINMAX);
+      resize(maps[i],maps[i],Size(image_width,image_height));
     }
 
     //Generate features for each bitmap
