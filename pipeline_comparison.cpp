@@ -237,7 +237,7 @@ int main(int argc, char* argv[])
     for (int i=2; i<argc; i++)
     {
       string s = string(argv[i]);
-      if (s.size() > 1)
+      if (s.size() > 0)
       {
         words_gt.push_back(string(argv[i]));
         //cout << " GT word " << words_gt[words_gt.size()-1] << endl;
