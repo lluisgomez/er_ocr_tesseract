@@ -12,7 +12,7 @@ int main (int argc, char* argv[])
 
     Mat img = imread(argv[1]);
     if(img.channels() != 3)
-      return(-1);
+      return(0);
     cvtColor(img,img,COLOR_RGB2GRAY);
 
     Mat tmp;
@@ -32,8 +32,8 @@ int main (int argc, char* argv[])
     }
     else if (contours.size()>2)
     {
-      cout << "Error: inconsistent number of contours " << contours.size() << endl;
-      return(-1);
+      //cout << "Error: inconsistent number of contours " << contours.size() << endl;
+      return(0);
     }
     Rect bbox = boundingRect(contours[idx]);
 
