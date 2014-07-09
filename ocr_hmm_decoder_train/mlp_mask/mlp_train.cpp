@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
 //2. Read the file
 ifstream infile("data_train.txt");
 
-int num_samples = 18600; //number of lines in the dataset file
+int num_samples = 7192; //number of lines in the dataset file
 int num_classes = 62; //number of classes
 int num_features = 200; //number of features
 
@@ -46,7 +46,7 @@ if (ifile)
   //1. Create the MLP with 3 layers
   Mat layers = Mat(3, 1, CV_32SC1);
   layers.row(0) = Scalar(num_features);
-  layers.row(1) = Scalar(150);
+  layers.row(1) = Scalar(400);
   layers.row(2) = Scalar(num_classes);
   mlp.create(layers,CvANN_MLP::SIGMOID_SYM,0.6,1);
 	CvANN_MLP_TrainParams params;
@@ -99,6 +99,7 @@ cout << "Train Accuracy = " << (float)tp/(tp+fp) << endl;
 
 ifstream test_infile("data_test.txt");
 
+num_samples = 7192; 
 hus = Mat(num_samples,num_features,CV_64FC1);
 labels = Mat::ones(num_samples,num_classes,CV_64FC1);
 labels = labels * -1;
