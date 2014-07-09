@@ -141,7 +141,7 @@ int main (int argc, char* argv[])
           maps[i](Rect(x,y,7,7)).copyTo(patch);
           Scalar mean,std;
           meanStdDev(patch,mean,std);
-          feature_vector[i*25+((int)x/7)+((int)y/7)*5] = mean[0];
+          feature_vector[i*25+((int)x/7)+((int)y/7)*5] = mean[0]/255;
           //cout << " avg " << mean[0] << " in patch " << x << "," << y << " channel " << i << " idx = " << i*25+((int)x/7)+((int)y/7)*5<< endl;
         }
       }
