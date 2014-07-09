@@ -3,7 +3,7 @@ import sys
 
 base_name = "End-to-end pipeline + Feedback Loop"
 
-with open("test/list.txt") as f:
+with open("test_all/list.txt") as f:
   content = f.readlines()
 
 total_edit_distance = 0
