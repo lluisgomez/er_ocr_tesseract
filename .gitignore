@@ -6,6 +6,7 @@ pipeline_comparison
 *~
 .*swp
 test
+test_all
 results
 CMakeCache.txt
 CMakeFiles
