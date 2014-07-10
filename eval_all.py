@@ -86,5 +86,7 @@ print "Avg. time regions extraction = "+str(total_time_regions/counter)
 print "Avg. time grouping           = "+str(total_time_grouping/counter)
 print "Avg. time ocr                = "+str(total_time_ocr/counter)
 print "End-to-end F-score           = "+str(2.0*tp/(2*tp+fp+fn)) 
+print "           Precision         = "+str(float(tp)/(tp+fp)) 
+print "           Recall            = "+str(float(tp)/(tp+fn)) 
 
 quit()
