@@ -409,7 +409,9 @@ bool isRepetitive(const string& s)
 {
   int count  = 0;
   int count2 = 0;
+  int count3 = 0;
   int first=(int)s[0];
+  int last=(int)s[s.size()-1];
   for (int i=0; i<s.size(); i++)
   {
     if ((s[i] == 'i') ||
@@ -418,8 +420,10 @@ bool isRepetitive(const string& s)
       count++;
     if((int)s[i]==first)
       count2++;
+    if((int)s[i]==last)
+      count3++;
   }
-  if ((count > (s.size()+1)/2) || (count2 == s.size()))
+  if ((count > (s.size()+1)/2) || (count2 == s.size()) || (count3 > (s.size()*2)/3))
   {
     return true;
   }
