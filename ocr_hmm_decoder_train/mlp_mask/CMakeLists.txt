@@ -9,10 +9,12 @@ ENDIF()
 find_package(OpenCV REQUIRED)
 
 ADD_EXECUTABLE(mlp_train mlp_train.cpp)
+ADD_EXECUTABLE(knn_train knn_train.cpp)
 ADD_EXECUTABLE(extract_features extract_features.cpp)
 
 FIND_PACKAGE(OpenCV REQUIRED)
 IF(OpenCV_FOUND)
   TARGET_LINK_LIBRARIES(mlp_train ${OpenCV_LIBS})
+  TARGET_LINK_LIBRARIES(knn_train ${OpenCV_LIBS})
   TARGET_LINK_LIBRARIES(extract_features ${OpenCV_LIBS})
 ENDIF()

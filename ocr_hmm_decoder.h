@@ -62,5 +62,6 @@ protected:
     decoder_mode mode;
 };
 
-Ptr<OCRHMMDecoder::ClassifierCallback> loadOCRHMMClassifier(const std::string& filename);
+Ptr<OCRHMMDecoder::ClassifierCallback> loadOCRHMMClassifierMLP(const std::string& filename);
+Ptr<OCRHMMDecoder::ClassifierCallback> loadOCRHMMClassifierKNN(const std::string& filename);
 

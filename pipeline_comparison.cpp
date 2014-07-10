@@ -139,7 +139,8 @@ int main(int argc, char* argv[])
 
 
   string voc = "abcdefghijklmnopqrtsuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  OCRHMMDecoder decoder(loadOCRHMMClassifier("ocr_hmm_decoder_train/mlp_mask/trained_mlp.xml"), voc, transition_p, emission_p);
+  //OCRHMMDecoder decoder(loadOCRHMMClassifierMLP("ocr_hmm_decoder_train/mlp_mask/trained_mlp.xml"), voc, transition_p, emission_p);
+  OCRHMMDecoder decoder(loadOCRHMMClassifierKNN("ocr_hmm_decoder_train/mlp_mask/knn_model_data.xml"), voc, transition_p, emission_p);
 
   /*Text Recognition (OCR)*/
 
