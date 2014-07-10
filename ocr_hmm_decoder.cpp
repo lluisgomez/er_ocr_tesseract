@@ -219,6 +219,10 @@ void OCRHMMClassifierMLP::eval( InputArray _src, InputArray _mask, vector<int>& 
   vector<Vec4i> hierarchy;
   /// Find contours
   findContours( tmp, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0) );
+
+  if (contours.empty())
+    return;
+
   int idx = 0;
   if (contours.size() > 1)
   {
@@ -425,6 +429,10 @@ void OCRHMMClassifierKNN::eval( InputArray _src, InputArray _mask, vector<int>& 
   vector<Vec4i> hierarchy;
   /// Find contours
   findContours( tmp, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0) );
+
+  if (contours.empty())
+    return;
+
   int idx = 0;
   if (contours.size() > 1)
   {
