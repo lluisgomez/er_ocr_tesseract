@@ -516,12 +516,50 @@ void OCRHMMClassifierKNN::eval( InputArray _src, InputArray _mask, vector<int>& 
   Mat class_predictions = Mat::zeros(1,62,CV_64FC1);
 
   static const char* ascii[62] = {"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","0","1","2","3","4","5","6","7","8","9"};
+  vector<vector<int> > equivalency_mat(62);
+  equivalency_mat[2].push_back(28);  // c -> C
+  equivalency_mat[28].push_back(2);  // C -> c
+  equivalency_mat[8].push_back(34);  // i -> I
+  equivalency_mat[8].push_back(11);  // i -> l
+  equivalency_mat[11].push_back(8);  // l -> i
+  equivalency_mat[11].push_back(34); // l -> I
+  equivalency_mat[34].push_back(8);  // I -> i
+  equivalency_mat[34].push_back(11); // I -> l
+  equivalency_mat[9].push_back(35);  // j -> J
+  equivalency_mat[35].push_back(9);  // J -> j
+  equivalency_mat[14].push_back(40); // o -> O
+  equivalency_mat[14].push_back(52); // o -> 0
+  equivalency_mat[40].push_back(14); // O -> o
+  equivalency_mat[40].push_back(52); // O -> 0
+  equivalency_mat[52].push_back(14); // 0 -> o
+  equivalency_mat[52].push_back(40); // 0 -> O
+  equivalency_mat[15].push_back(41); // p -> P
+  equivalency_mat[41].push_back(15); // P -> p
+  equivalency_mat[18].push_back(44); // s -> S
+  equivalency_mat[44].push_back(18); // S -> s
+  equivalency_mat[20].push_back(46); // u -> U
+  equivalency_mat[46].push_back(20); // U -> u
+  equivalency_mat[21].push_back(47); // v -> V
+  equivalency_mat[47].push_back(21); // V -> v
+  equivalency_mat[22].push_back(48); // w -> W
+  equivalency_mat[48].push_back(22); // W -> w
+  equivalency_mat[23].push_back(49); // x -> X
+  equivalency_mat[49].push_back(23); // X -> x
+  equivalency_mat[25].push_back(51); // z -> Z
+  equivalency_mat[51].push_back(25); // Z -> z
+
   
   printf("\n K nearest responses: ");
   for (int j=0; j<responses.cols; j++)
   {
       cout << ascii[(int)responses.at<float>(0,j)] << "(" << dists.at<float>(0,j) << ")  ";
       class_predictions.at<double>(0,(int)responses.at<float>(0,j)) += dists.at<float>(0,j);
+      for (int e=0; e<equivalency_mat[(int)responses.at<float>(0,j)].size(); e++)
+      {
+        cout << ascii[equivalency_mat[(int)responses.at<float>(0,j)][e]] << "(" << dists.at<float>(0,j) << ")  ";
+        class_predictions.at<double>(0,equivalency_mat[(int)responses.at<float>(0,j)][e]) += dists.at<float>(0,j);
+        dist_sum[0] +=  dists.at<float>(0,j);
+      }
   }
   
   class_predictions = class_predictions/dist_sum[0];
