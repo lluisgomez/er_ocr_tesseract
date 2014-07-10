@@ -14,6 +14,9 @@
 #define GROUPING_ALGORITHM 1 // 0=exhaustive_search, 1=exhaustive_search + feedback loop, 2=multioriented
 #define SEGMENTATION       0 // 0=B&W regions, 1=B&W regions + gaussian blur, 2=croped image, 
                              // 3=croped image + adaptive threshold, 4= cropped image + otsu threshold
+                             
+#define RECOGNITION        1 // 0=tesseract, 1=NM_chain_features+KNN, 2=NM_chain_features+MLP
+
 
 using namespace cv;
 using namespace std;
@@ -129,25 +132,44 @@ int main(int argc, char* argv[])
   }
   cout << "TIME_GROUPING_ALT = " << ((double)getTickCount() - t_g)*1000/getTickFrequency() << endl;
 
-  /*test*/
-
-  Mat transition_p = Mat(62,62,CV_64FC1);
-  string filename = "transitions_OCRHMM.xml";
-  FileStorage fs(filename, FileStorage::READ);
-  fs["transition_probabilities"] >> transition_p;
-  Mat emission_p = Mat::eye(62,62,CV_64FC1);
 
 
-  string voc = "abcdefghijklmnopqrtsuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  //OCRHMMDecoder decoder(loadOCRHMMClassifierMLP("ocr_hmm_decoder_train/mlp_mask/trained_mlp.xml"), voc, transition_p, emission_p);
-  OCRHMMDecoder decoder(loadOCRHMMClassifierKNN("ocr_hmm_decoder_train/mlp_mask/knn_model_data.xml"), voc, transition_p, emission_p);
 
   /*Text Recognition (OCR)*/
 
+  void* ocr;
+  Mat transition_p;
+  Mat emission_p;
+  string voc;
+
   double t_r = getTickCount();
-  OCRTesseract* ocr = new OCRTesseract();
+
+  if (RECOGNITION == 0)
+  {
+    ocr = (void*) new OCRTesseract();
+  }
+  else 
+  {
+    transition_p = Mat(62,62,CV_64FC1);
+    string filename = "transitions_OCRHMM.xml";
+    FileStorage fs(filename, FileStorage::READ);
+    fs["transition_probabilities"] >> transition_p;
+    emission_p = Mat::eye(62,62,CV_64FC1);
+    voc = "abcdefghijklmnopqrtsuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+    if (RECOGNITION == 1)
+    {
+      ocr = (void*) new OCRHMMDecoder(loadOCRHMMClassifierKNN("ocr_hmm_decoder_train/mlp_mask/knn_model_data.xml"), 
+                                      voc, transition_p, emission_p);
+    }
+    if (RECOGNITION == 2)
+    {
+      ocr = (void*) new OCRHMMDecoder(loadOCRHMMClassifierMLP("ocr_hmm_decoder_train/mlp_mask/trained_mlp.xml"), 
+                                      voc, transition_p, emission_p);
+    }
+  }
+
   cout << "TIME_OCR_INITIALIZATION_ALT = "<< ((double)getTickCount() - t_r)*1000/getTickFrequency() << endl;
-  string output;
 
   Mat out_img;
   Mat out_img_detection;
@@ -157,6 +179,7 @@ int main(int argc, char* argv[])
   float scale_img  = 600./image.rows;
   float scale_font = (2-scale_img)/1.4;
   vector<string> words_detection;
+  string output;
  
   t_r = getTickCount();
 
@@ -192,16 +215,26 @@ int main(int argc, char* argv[])
     vector<Rect>   boxes;
     vector<string> words;
     vector<float>  confidences;
-    ocr->run(group_img, output, &boxes, &words, &confidences, OCR_LEVEL_WORD);
+
+
+    float min_confidence1,min_confidence2;
+
+    if (RECOGNITION == 0)
+    {
+      ((OCRTesseract*)ocr)->run(group_img, output, &boxes, &words, &confidences, OCR_LEVEL_WORD);
+      min_confidence1 = 51.;
+      min_confidence2 = 60.;
+    }
+    else
+    {
+      ((OCRHMMDecoder*)ocr)->run(group_img, group_img, output, &boxes, &words, &confidences, OCR_LEVEL_WORD);
+      min_confidence1 = 0.;
+      min_confidence2 = 0.;
+    }
   
-    /*Test*/
-    string out;
-    decoder.run(group_img,group_img,out);
-    cout << " !!!!!!!!!!!!!!!!!!!!!!!!!! "<< endl << out << endl;
-    cout << " !!!!!!!!!!!!!!!!!!!!!!!!!! "<< endl;
 
     output.erase(remove(output.begin(), output.end(), '\n'), output.end());
-    //cout << "OCR output = \"" << output << "\" lenght = " << output.size() << endl;
+    cout << "OCR output = \"" << output << "\" lenght = " << output.size() << endl;
     if (output.size() < 3)
       continue;
 
@@ -211,9 +244,9 @@ int main(int argc, char* argv[])
       boxes[j].y += nm_boxes[i].y-15;
 
       //cout << "  word = " << words[j] << "\t confidence = " << confidences[j] << endl;
-      if ((words[j].size() < 2) || (confidences[j] < 51) || 
+      if ((words[j].size() < 2) || (confidences[j] < min_confidence1) || 
           ((words[j].size()==2) && (words[j][0] == words[j][1])) ||
-          ((words[j].size()< 4) && (confidences[j] < 60)) ||
+          ((words[j].size()< 4) && (confidences[j] < min_confidence2)) ||
           isRepetitive(words[j]))
         continue;
       words_detection.push_back(words[j]);
@@ -374,18 +407,24 @@ size_t edit_distance(const string& A, const string& B)
 
 bool isRepetitive(const string& s)
 {
-  int count = 0;
+  int count  = 0;
+  int count2 = 0;
+  int first=(int)s[0];
   for (int i=0; i<s.size(); i++)
   {
     if ((s[i] == 'i') ||
         (s[i] == 'l') ||
         (s[i] == 'I'))
       count++;
+    if((int)s[i]==first)
+      count2++;
   }
-  if (count > (s.size()+1)/2)
+  if ((count > (s.size()+1)/2) || (count2 == s.size()))
   {
     return true;
   }
+
+
   return false;
 }
 

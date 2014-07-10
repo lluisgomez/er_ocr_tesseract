@@ -15,12 +15,6 @@ enum decoder_mode
     DECODER_VITERBI = 0 // Other algorithms may be added
 };
 
-enum component_level 
-{
-  DECODER_LEVEL_WORD     = 0,
-  DECODER_LEVEL_TEXTLINE = 1
-};
-
 class CV_EXPORTS OCRHMMDecoder : public Algorithm
 {
 public:
@@ -48,10 +42,13 @@ public:
 
     //! Decode a group of regions and output the most likely sequence of characters
     // output probability of the output sequence
-    double run( InputArray src,                // RGB or greyscale original image (in case the feature extractor needs it)
+    double run( InputArray src,              // RGB or greyscale original image (in case the feature extractor needs it)
               InputArray mask,               // single channel image with labeled regions
               string& out_sequence,          // output the most likely sequence
-              component_level level=DECODER_LEVEL_WORD);  // specify words, lines, etc...
+	            vector<Rect>* component_rects=NULL, 
+              vector<string>* component_texts=NULL, 
+              vector<float>* component_confidences=NULL,
+              int component_level=0);  // specify words, lines, etc...
 
 protected:
 

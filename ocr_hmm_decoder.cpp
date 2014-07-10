@@ -23,7 +23,10 @@ bool sort_rect_horiz (Rect a,Rect b) { return (a.x<b.x); }
 double OCRHMMDecoder::run( InputArray src,
               InputArray mask,
               string& out_sequence,
-              component_level level)
+	            vector<Rect>* component_rects, 
+              vector<string>* component_texts, 
+              vector<float>* component_confidences,
+              int component_level)
 {
 
   vector< vector<int> > observations;
@@ -51,10 +54,12 @@ double OCRHMMDecoder::run( InputArray src,
     Mat tmp_mask;
     src.getMat()(contours_rect.at(i)).copyTo(tmp_src);
     mask.getMat()(contours_rect.at(i)).copyTo(tmp_mask);
+
     vector<int> out_class;
     vector<double> out_conf;
     classifier->eval(tmp_src,tmp_mask,out_class,out_conf);
-    obs.push_back(out_class[0]);
+    if (!out_class.empty())
+      obs.push_back(out_class[0]);
     observations.push_back(out_class);
     confidences.push_back(out_conf);
   }
@@ -165,8 +170,11 @@ double OCRHMMDecoder::run( InputArray src,
         }
    }
 
-   cout << path[best_idx] << endl;
+   //cout << path[best_idx] << endl;
    out_sequence = path[best_idx];
+	 component_rects->push_back(Rect(0,0,mask.getMat().cols,mask.getMat().rows));
+   component_texts->push_back(path[best_idx]);
+   component_confidences->push_back(max_prob);
    return max_prob;
 
 
@@ -212,18 +220,26 @@ void OCRHMMClassifierMLP::eval( InputArray _src, InputArray _mask, vector<int>& 
   /// Find contours
   findContours( tmp, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0) );
   int idx = 0;
-  if (contours.size()==2)
+  if (contours.size() > 1)
   {
-    // "i" and "j" have two contours, take the larger one
-    Rect bbox0 = boundingRect(contours[0]);
-    Rect bbox1 = boundingRect(contours[1]);
-    if (bbox1.area() > bbox0.area())
-      idx = 1;
-  }
-  else if (contours.size()>2)
-  {
-    cout << "Error: inconsistent number of contours" << endl;
-    return;
+    // this is to make sure we have the mask with a single contour
+    // e.g "i" and "j" have two contours, but it may be also a part of a neighbour character
+    // we take the larger one and clean the outside in order to have a single contour
+    int max_area = 0;
+    for (int cc=0; cc<contours.size(); cc++)
+    {
+      int area_c = boundingRect(contours[cc]).area();
+      if ( area_c > max_area)
+      {
+        idx = cc;
+        max_area = area_c;
+      }
+    }
+
+    // clean-up the outside of the contour 
+    Mat tmp_c = Mat::zeros(tmp.rows, tmp.cols, CV_8UC1);
+    drawContours(tmp_c, contours, idx, Scalar(255), CV_FILLED);
+    img = img & tmp_c;
   }
   Rect bbox = boundingRect(contours[idx]);
 
@@ -322,10 +338,10 @@ void OCRHMMClassifierMLP::eval( InputArray _src, InputArray _mask, vector<int>& 
   minMaxLoc( predictions, &minVal, &maxVal);
   predictions = (predictions - minVal) / (maxVal-minVal);
 
-  printf("\n The char sample may be one of: ");
+  //printf("\n The char sample may be one of: ");
   for (int j=0; j<predictions.cols; j++)
   {
-      cout << ascii[j] << "(" << predictions.at<double>(0,j) << ") ";
+      //cout << ascii[j] << "(" << predictions.at<double>(0,j) << ") ";
       if (predictions.at<double>(0,j) > 0.99)
       {
         out_class.insert(out_class.begin(),j);
@@ -339,10 +355,10 @@ void OCRHMMClassifierMLP::eval( InputArray _src, InputArray _mask, vector<int>& 
   }
 
 
-  printf("\n !! The char sample is predicted as: %s \n\n", ascii[out_class[0]]);
+  //printf("\n !! The char sample is predicted as: %s \n\n", ascii[out_class[0]]);
 
-  cout << sample << endl;
-  imshow("1",img);
+  //cout << sample << endl;
+  /*imshow("1",img);
   imshow("2",mask);
   Mat all_maps = Mat::zeros(image_height,image_width*maps.size(),CV_8UC1);
   for (int i=0; i<maps.size(); i++)
@@ -351,7 +367,7 @@ void OCRHMMClassifierMLP::eval( InputArray _src, InputArray _mask, vector<int>& 
   }
   imshow("3",all_maps);
   imwrite("out.jpg",mask);
-  waitKey(0);
+  waitKey(0);*/
 
 }
 
@@ -410,18 +426,26 @@ void OCRHMMClassifierKNN::eval( InputArray _src, InputArray _mask, vector<int>& 
   /// Find contours
   findContours( tmp, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0) );
   int idx = 0;
-  if (contours.size()==2)
+  if (contours.size() > 1)
   {
-    // "i" and "j" have two contours, take the larger one
-    Rect bbox0 = boundingRect(contours[0]);
-    Rect bbox1 = boundingRect(contours[1]);
-    if (bbox1.area() > bbox0.area())
-      idx = 1;
-  }
-  else if (contours.size()>2)
-  {
-    cout << "Error: inconsistent number of contours" << endl;
-    return;
+    // this is to make sure we have the mask with a single contour
+    // e.g "i" and "j" have two contours, but it may be also a part of a neighbour character
+    // we take the larger one and clean the outside in order to have a single contour
+    int max_area = 0;
+    for (int cc=0; cc<contours.size(); cc++)
+    {
+      int area_c = boundingRect(contours[cc]).area();
+      if ( area_c > max_area)
+      {
+        idx = cc;
+        max_area = area_c;
+      }
+    }
+
+    // clean-up the outside of the contour 
+    Mat tmp_c = Mat::zeros(tmp.rows, tmp.cols, CV_8UC1);
+    drawContours(tmp_c, contours, idx, Scalar(255), CV_FILLED);
+    img = img & tmp_c;
   }
   Rect bbox = boundingRect(contours[idx]);
 
@@ -549,14 +573,16 @@ void OCRHMMClassifierKNN::eval( InputArray _src, InputArray _mask, vector<int>& 
   equivalency_mat[51].push_back(25); // Z -> z
 
   
-  printf("\n K nearest responses: ");
+  //printf("\n K nearest responses: ");
   for (int j=0; j<responses.cols; j++)
   {
-      cout << ascii[(int)responses.at<float>(0,j)] << "(" << dists.at<float>(0,j) << ")  ";
+      if (responses.at<float>(0,j)<0)
+        continue;
+      //cout << ascii[(int)responses.at<float>(0,j)] << "(" << dists.at<float>(0,j) << ")  ";
       class_predictions.at<double>(0,(int)responses.at<float>(0,j)) += dists.at<float>(0,j);
       for (int e=0; e<equivalency_mat[(int)responses.at<float>(0,j)].size(); e++)
       {
-        cout << ascii[equivalency_mat[(int)responses.at<float>(0,j)][e]] << "(" << dists.at<float>(0,j) << ")  ";
+        //cout << ascii[equivalency_mat[(int)responses.at<float>(0,j)][e]] << "(" << dists.at<float>(0,j) << ")  ";
         class_predictions.at<double>(0,equivalency_mat[(int)responses.at<float>(0,j)][e]) += dists.at<float>(0,j);
         dist_sum[0] +=  dists.at<float>(0,j);
       }
@@ -576,11 +602,11 @@ void OCRHMMClassifierKNN::eval( InputArray _src, InputArray _mask, vector<int>& 
     }
   }
   
-  printf("\n !! The char sample is predicted as: %s \n\n", ascii[(int)predictions.at<float>(0,0)]);
+  //printf("\n !! The char sample is predicted as: %s \n\n", ascii[(int)predictions.at<float>(0,0)]);
 
 
   //cout << sample << endl;
-  imshow("1",img);
+  /*imshow("1",img);
   imshow("2",mask);
   Mat all_maps = Mat::zeros(image_height,image_width*maps.size(),CV_8UC1);
   for (int i=0; i<maps.size(); i++)
@@ -589,7 +615,7 @@ void OCRHMMClassifierKNN::eval( InputArray _src, InputArray _mask, vector<int>& 
   }
   imshow("3",all_maps);
   imwrite("out.jpg",mask);
-  waitKey(0);
+  waitKey(0);*/
 
 }
 
