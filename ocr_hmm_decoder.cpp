@@ -288,7 +288,7 @@ void OCRHMMClassifierMLP::eval( InputArray _src, InputArray _mask, vector<int>& 
   for (int i=0; i<maps.size(); i++)
   {
     copyMakeBorder(maps[i],maps[i],7,7,7,7,BORDER_CONSTANT,Scalar(0));
-    GaussianBlur(maps[i], maps[i], Size(7,7), 7, 7);
+    GaussianBlur(maps[i], maps[i], Size(7,7), 2, 2);
     normalize(maps[i],maps[i],0,255,NORM_MINMAX);
     resize(maps[i],maps[i],Size(image_width,image_height));
   }
@@ -486,7 +486,7 @@ void OCRHMMClassifierKNN::eval( InputArray _src, InputArray _mask, vector<int>& 
   for (int i=0; i<maps.size(); i++)
   {
     copyMakeBorder(maps[i],maps[i],7,7,7,7,BORDER_CONSTANT,Scalar(0));
-    GaussianBlur(maps[i], maps[i], Size(7,7), 7, 7);
+    GaussianBlur(maps[i], maps[i], Size(7,7), 2, 2);
     normalize(maps[i],maps[i],0,255,NORM_MINMAX);
     resize(maps[i],maps[i],Size(image_width,image_height));
   }
