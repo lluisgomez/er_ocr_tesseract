@@ -29,12 +29,114 @@ double OCRHMMDecoder::run( InputArray src,
               int component_level)
 {
 
+  out_sequence.clear();
+  component_rects->clear();
+  component_texts->clear();
+  component_confidences->clear();
+
+  // First we split a line into words (TODO this must be optional)
+  vector<Mat> words_mask;
+  vector<Mat> words_src;
+  vector<Rect> words_rect;
+
+  /// Find contours
+  vector<vector<Point> > contours;
+  vector<Vec4i> hierarchy;
+  Mat tmp;
+  mask.getMat().copyTo(tmp);
+  findContours( tmp, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0) );
+  if (contours.size() < 6)
+  {
+    //do not split lines with less than 6 characters
+    words_mask.push_back(mask.getMat());
+    words_src.push_back(src.getMat());
+    words_rect.push_back(Rect(0,0,mask.getMat().cols,mask.getMat().rows));
+  }
+  else
+  {
+
+
+        Mat_<float> vector_w((int)mask.getMat().cols,1);
+        reduce(mask.getMat(), vector_w, 0, CV_REDUCE_SUM, -1);
+
+        vector<int> spaces;
+        vector<int> spaces_start;
+        vector<int> spaces_end;
+        int space_count=0;
+        int last_one_idx;
+        for (int s=0; s<vector_w.cols; s++)
+        {
+            if (vector_w.at<float>(0,s) == 0)
+            {
+                space_count++;
+            } else {
+                if (space_count!=0)
+                {
+                    spaces.push_back(space_count);
+                    spaces_start.push_back(last_one_idx);
+                    spaces_end.push_back(s-1);
+                }
+                space_count = 0;
+                last_one_idx = s;
+            }
+        }
+        Scalar mean_space,std_space;
+        meanStdDev(Mat(spaces),mean_space,std_space);
+        int num_word_spaces = 0;
+        int last_word_space_end = 0;
+        for (int s=0; s<spaces.size(); s++)
+        {
+            if (spaces_end.at(s)-spaces_start.at(s) > mean_space[0]+(mean_space[0]*1.1)) //TODO this 1.1 is a param
+            {
+                if (num_word_spaces == 0)
+                {
+                    //cout << " we have a word from  0  to " << spaces_start.at(s) << endl;
+                    Mat word_mask, word_src;
+                    Rect word_rect = Rect(0,0,spaces_start.at(s),mask.getMat().rows);
+                    mask.getMat()(word_rect).copyTo(word_mask);
+                    src.getMat()(word_rect).copyTo(word_src);
+
+                    words_mask.push_back(word_mask);
+                    words_src.push_back(word_src);
+                    words_rect.push_back(word_rect);
+                }
+                else
+                {
+                    //cout << " we have a word from " << last_word_space_end << " to " << spaces_start.at(s) << endl;
+                    Mat word_mask, word_src;
+                    Rect word_rect = Rect(last_word_space_end,0,spaces_start.at(s)-last_word_space_end,mask.getMat().rows);
+                    mask.getMat()(word_rect).copyTo(word_mask);
+                    src.getMat()(word_rect).copyTo(word_src);
+
+                    words_mask.push_back(word_mask);
+                    words_src.push_back(word_src);
+                    words_rect.push_back(word_rect);
+                }
+                num_word_spaces++;
+                last_word_space_end = spaces_end.at(s);
+            }
+        }
+        //cout << " we have a word from " << last_word_space_end << " to " << vector_w.cols << endl << endl << endl;
+                    Mat word_mask, word_src;
+                    Rect word_rect = Rect(last_word_space_end,0,vector_w.cols-last_word_space_end,mask.getMat().rows);
+                    mask.getMat()(word_rect).copyTo(word_mask);
+                    src.getMat()(word_rect).copyTo(word_src);
+
+                    words_mask.push_back(word_mask);
+                    words_src.push_back(word_src);
+                    words_rect.push_back(word_rect);
+
+  }
+
+  for (int w=0; w<words_mask.size(); w++)
+  {
+
   vector< vector<int> > observations;
   vector< vector<double> > confidences;
   vector<int> obs;
   // First find contours and sort by x coordinate of bbox
   Mat tmp;
-  mask.getMat().copyTo(tmp);
+  words_mask[w].copyTo(tmp);
   vector<vector<Point> > contours;
   vector<Vec4i> hierarchy;
   /// Find contours
@@ -52,8 +154,8 @@ double OCRHMMDecoder::run( InputArray src,
   {
     Mat tmp_src;
     Mat tmp_mask;
-    src.getMat()(contours_rect.at(i)).copyTo(tmp_src);
-    mask.getMat()(contours_rect.at(i)).copyTo(tmp_mask);
+    words_src[w](contours_rect.at(i)).copyTo(tmp_src);
+    words_mask[w](contours_rect.at(i)).copyTo(tmp_mask);
 
     vector<int> out_class;
     vector<double> out_conf;
@@ -63,43 +165,6 @@ double OCRHMMDecoder::run( InputArray src,
     observations.push_back(out_class);
     confidences.push_back(out_conf);
   }
-  /*obs.push_back(7);
-  vector<int> tmp;
-  tmp.push_back(7);
-  observations.push_back(tmp);
-  vector<double> tmp2;
-  tmp2.push_back(1.);
-  confidences.push_back(tmp2);
-
-  obs.push_back(4);
-  tmp[0] = 4;
-  observations.push_back(tmp);
-  confidences.push_back(tmp2);
-
-  obs.push_back(11);
-  tmp[0] = 11;
-  observations.push_back(tmp);
-  confidences.push_back(tmp2);
-
-  obs.push_back(7);
-  tmp[0] = 7;
-  tmp.push_back(11);
-  observations.push_back(tmp);
-  tmp2[0] = 0.7;
-  tmp2.push_back(0.3);
-  confidences.push_back(tmp2);
-
-  obs.push_back(14);
-  tmp.clear();
-  tmp.push_back(14);
-  observations.push_back(tmp);
-  tmp2.clear();
-  tmp2.push_back(1.);
-  confidences.push_back(tmp2);*/
-
-
-
-
 
 
   //This must be extracted from dictionary, or just assumed to be equal for all characters
@@ -171,11 +236,14 @@ double OCRHMMDecoder::run( InputArray src,
    }
 
    //cout << path[best_idx] << endl;
-   out_sequence = path[best_idx];
-	 component_rects->push_back(Rect(0,0,mask.getMat().cols,mask.getMat().rows));
+   out_sequence = out_sequence+" "+path[best_idx];
+	 component_rects->push_back(words_rect[w]);
    component_texts->push_back(path[best_idx]);
    component_confidences->push_back(max_prob);
-   return max_prob;
+
+  }
+   
+  return 0;
 
 
 }
